@@ -28,12 +28,14 @@ export default function BlogAutoPage() {
   return (
     <div className="flex flex-col flex-1">
       <main className="max-w-3xl mx-auto px-6 py-16 text-center space-y-6">
-        <p className="text-sm text-muted-foreground">
-          <Link href="/" className="underline">
+        <p className="text-sm text-muted-foreground font-mono">
+          <Link href="/" className="neon-text-pink underline">
             ← ホームに戻る
           </Link>
         </p>
-        <h1 className="text-4xl font-bold tracking-tight">ブログオート</h1>
+        <h1 className="neon-text text-4xl font-bold tracking-tight font-mono">
+          ブログオート
+        </h1>
         <p className="text-lg text-muted-foreground">
           キーワードを入れるだけで、SEO記事が自動で完成
         </p>
@@ -51,17 +53,19 @@ export default function BlogAutoPage() {
             />
           }
         >
-          サイトを見る
+          サイトを見る →
         </Button>
       </main>
 
-      <Separator className="max-w-2xl mx-auto" />
+      <Separator className="max-w-2xl mx-auto bg-primary/30" />
 
       <section className="max-w-3xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-4 w-full">
         {FEATURES.map((feature) => (
-          <Card key={feature.title}>
+          <Card key={feature.title} className="neon-border bg-card/60 backdrop-blur">
             <CardHeader>
-              <CardTitle className="text-base">{feature.title}</CardTitle>
+              <CardTitle className="text-base neon-text font-mono">
+                {feature.title}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">{feature.description}</p>
@@ -71,15 +75,17 @@ export default function BlogAutoPage() {
       </section>
 
       <section className="max-w-3xl mx-auto px-6 py-16 w-full space-y-4">
-        <h2 className="text-xl font-bold text-center">料金プラン</h2>
+        <h2 className="neon-text-pink text-xl font-bold text-center font-mono">
+          # 料金プラン
+        </h2>
         <div className="grid md:grid-cols-3 gap-4">
           {PLANS.map((plan) => (
-            <Card key={plan.name}>
+            <Card key={plan.name} className="neon-border-pink bg-card/40">
               <CardHeader>
-                <CardTitle className="text-base">{plan.name}</CardTitle>
+                <CardTitle className="text-base font-mono">{plan.name}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
-                <p className="text-xl font-bold">{plan.price}</p>
+                <p className="neon-text text-xl font-bold font-mono">{plan.price}</p>
                 <p className="text-sm text-muted-foreground">{plan.limit}</p>
               </CardContent>
             </Card>

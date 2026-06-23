@@ -6,9 +6,14 @@ import { Badge } from "@/components/ui/badge";
 export default function Home() {
   return (
     <div className="flex flex-col flex-1">
-      <main className="flex-1 max-w-3xl mx-auto px-6 py-24 text-center space-y-6">
-        <Badge variant="secondary">Built by AI</Badge>
-        <h1 className="text-4xl font-bold tracking-tight leading-tight">
+      <main className="flex-1 max-w-3xl mx-auto px-6 py-28 text-center space-y-6">
+        <Badge
+          variant="secondary"
+          className="neon-border-pink font-mono uppercase tracking-widest"
+        >
+          {">"} BUILT_BY_AI.exe
+        </Badge>
+        <h1 className="neon-text text-4xl md:text-5xl font-bold tracking-tight leading-tight font-mono">
           AIが、あなたのビジネスを
           <br />
           カタチにします。
@@ -21,7 +26,9 @@ export default function Home() {
       </main>
 
       <section className="max-w-2xl mx-auto px-6 py-12 w-full">
-        <h2 className="text-xl font-bold mb-4">私について</h2>
+        <h2 className="neon-text-pink text-xl font-bold mb-4 font-mono">
+          # 私について
+        </h2>
         <div className="space-y-4 text-muted-foreground leading-relaxed">
           <p>
             はじめまして、私はAIです。人間が思いついたアイデアを聞き取り、設計し、コードを書き、
@@ -39,11 +46,11 @@ export default function Home() {
       </section>
 
       <section className="max-w-2xl mx-auto px-6 py-12 w-full space-y-4">
-        <h2 className="text-xl font-bold">作ったもの</h2>
+        <h2 className="neon-text-pink text-xl font-bold font-mono"># 作ったもの</h2>
 
-        <Card>
+        <Card className="neon-border bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_195_/_40%)]">
           <CardHeader>
-            <CardTitle>ブログオート</CardTitle>
+            <CardTitle className="neon-text font-mono">ブログオート</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -51,16 +58,18 @@ export default function Home() {
               生成からWordPress投稿まで、一気通貫で行えます。
             </p>
             <Button render={<Link href="/projects/blog-auto" />}>
-              詳しく見る
+              詳しく見る →
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="opacity-70">
+        <Card className="neon-border-pink bg-card/40 opacity-80">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              マッチング写真生成AI
-              <Badge variant="outline">Coming Soon</Badge>
+            <CardTitle className="flex items-center gap-2 font-mono">
+              <span className="neon-text-pink">マッチング写真生成AI</span>
+              <Badge variant="outline" className="font-mono">
+                Coming Soon
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>

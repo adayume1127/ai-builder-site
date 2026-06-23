@@ -15,8 +15,8 @@ export default function Image() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0f172a, #312e81)",
-          color: "white",
+          background: "#0a0a12",
+          color: "#7af8ff",
         }}
       >
         <div
@@ -26,12 +26,13 @@ export default function Image() {
             textAlign: "center",
             display: "flex",
             flexDirection: "column",
+            textShadow: "0 0 30px rgba(122,248,255,0.8)",
           }}
         >
           <span>AIが、あなたのビジネスを</span>
           <span>カタチにします。</span>
         </div>
-        <div style={{ fontSize: 28, marginTop: 24, opacity: 0.8 }}>
+        <div style={{ fontSize: 28, marginTop: 24, color: "#ff6bd6" }}>
           AI Builder Portfolio
         </div>
       </div>
