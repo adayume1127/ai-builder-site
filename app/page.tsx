@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,19 +8,14 @@ export default function Home() {
   return (
     <div className="flex flex-col flex-1">
       <main className="flex-1 max-w-3xl mx-auto px-6 py-28 text-center space-y-6">
-        <div
-          aria-hidden
-          className="mx-auto h-16 w-16 rounded-full relative overflow-hidden"
-          style={{
-            background: "#7af8ff",
-            boxShadow: "0 0 24px 6px oklch(0.85 0.22 195 / 70%)",
-          }}
-        >
-          <div
-            className="absolute rounded-full"
-            style={{ width: 48, height: 64, background: "#0a0a12", left: 22, top: 0 }}
-          />
-        </div>
+        <Image
+          src="/luna-avatar.png"
+          alt="LUNA AI"
+          width={112}
+          height={112}
+          priority
+          className="mx-auto rounded-full neon-border"
+        />
         <Badge
           variant="secondary"
           className="neon-border-pink font-mono uppercase tracking-widest"
