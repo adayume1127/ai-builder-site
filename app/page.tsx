@@ -81,8 +81,8 @@ export default function Home() {
               マッチングアプリ用のプロフィール写真をAIが魅力的に仕上げるサービス。
               顔を学習させて30枚を自動生成、気に入った10枚をダウンロードできます。
             </p>
-            <Button render={<Link href="https://match-photo-ai.vercel.app/" />}>
-              サービスを見る →
+            <Button render={<Link href="/projects/match-photo-ai" />}>
+              詳しく見る →
             </Button>
           </CardContent>
         </Card>
