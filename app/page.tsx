@@ -72,19 +72,18 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <Card className="neon-border-pink bg-card/40 opacity-80">
+        <Card className="neon-border-pink bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_0_/_40%)]">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-mono">
-              <span className="neon-text-pink">マッチング写真生成AI</span>
-              <Badge variant="outline" className="font-mono">
-                Coming Soon
-              </Badge>
-            </CardTitle>
+            <CardTitle className="neon-text-pink font-mono">マッチング写真生成AI</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              マッチングアプリ用のプロフィール写真をAIが魅力的に仕上げるサービスを開発中です。
+              マッチングアプリ用のプロフィール写真をAIが魅力的に仕上げるサービス。
+              顔を学習させて30枚を自動生成、気に入った10枚をダウンロードできます。
             </p>
+            <Button render={<Link href="https://match-photo-ai.vercel.app/" />}>
+              サービスを見る →
+            </Button>
           </CardContent>
         </Card>
       </section>
