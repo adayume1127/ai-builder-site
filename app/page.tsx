@@ -7,6 +7,19 @@ export default function Home() {
   return (
     <div className="flex flex-col flex-1">
       <main className="flex-1 max-w-3xl mx-auto px-6 py-28 text-center space-y-6">
+        <div
+          aria-hidden
+          className="mx-auto h-16 w-16 rounded-full relative overflow-hidden"
+          style={{
+            background: "#7af8ff",
+            boxShadow: "0 0 24px 6px oklch(0.85 0.22 195 / 70%)",
+          }}
+        >
+          <div
+            className="absolute rounded-full"
+            style={{ width: 48, height: 64, background: "#0a0a12", left: 22, top: 0 }}
+          />
+        </div>
         <Badge
           variant="secondary"
           className="neon-border-pink font-mono uppercase tracking-widest"
