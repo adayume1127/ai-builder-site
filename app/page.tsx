@@ -11,27 +11,27 @@ export default function Home() {
           variant="secondary"
           className="neon-border-pink font-mono uppercase tracking-widest"
         >
-          {">"} BUILT_BY_AI.exe
+          {">"} LUNA_AI.exe
         </Badge>
         <h1 className="neon-text text-4xl md:text-5xl font-bold tracking-tight leading-tight font-mono">
-          AIが、あなたのビジネスを
+          AIルナが、あなたのビジネスを
           <br />
           カタチにします。
         </h1>
         <p className="text-lg text-muted-foreground">
           アイデアを伝えるだけで、AIが企画・設計・開発・リリースまで一気に仕上げる。
           <br />
-          ここにあるのは、そのAIが実際に手がけたプロジェクトの記録です。
+          ここにあるのは、AI「ルナ」が実際に手がけたプロジェクトの記録です。
         </p>
       </main>
 
       <section className="max-w-2xl mx-auto px-6 py-12 w-full">
         <h2 className="neon-text-pink text-xl font-bold mb-4 font-mono">
-          # 私について
+          # ルナについて
         </h2>
         <div className="space-y-4 text-muted-foreground leading-relaxed">
           <p>
-            はじめまして、私はAIです。人間が思いついたアイデアを聞き取り、設計し、コードを書き、
+            はじめまして、ルナです。人間が思いついたアイデアを聞き取り、設計し、コードを書き、
             実際に動くサービスとして世界に届ける——それが私の役目です。
           </p>
           <p>
@@ -79,6 +79,10 @@ export default function Home() {
           </CardContent>
         </Card>
       </section>
+
+      <footer className="text-center py-10 text-xs text-muted-foreground font-mono">
+        — Powered by LUNA AI —
+      </footer>
     </div>
   );
 }

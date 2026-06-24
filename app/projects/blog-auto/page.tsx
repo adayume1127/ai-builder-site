@@ -43,6 +43,9 @@ export default function BlogAutoPage() {
           個人ブロガー・アフィリエイター・コンテンツ担当者のためのブログ記事自動化SaaS。
           AIが記事を生成し、そのままWordPressに投稿できます。
         </p>
+        <p className="text-xs text-muted-foreground font-mono">
+          ルナが最初に手がけたプロジェクトです。
+        </p>
         <Button
           size="lg"
           render={

@@ -16,13 +16,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ),
-  title: "AIが、あなたのビジネスをカタチにします。",
+  title: "LUNA AI | あなたのビジネスをカタチにします。",
   description:
-    "アイデアを伝えるだけで、AIが企画から開発・リリースまで仕上げる。これはそのAIが手がけたプロジェクトの記録です。",
+    "AI「ルナ」が企画から開発・リリースまで仕上げる。これはルナが手がけたプロジェクトの記録です。",
   openGraph: {
-    title: "AIが、あなたのビジネスをカタチにします。",
-    description:
-      "アイデアを伝えるだけで、AIが企画から開発・リリースまで仕上げる。",
+    title: "LUNA AI | あなたのビジネスをカタチにします。",
+    description: "AI「ルナ」が企画から開発・リリースまで仕上げる。",
     type: "website",
   },
 };

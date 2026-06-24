@@ -29,11 +29,11 @@ export default function Image() {
             textShadow: "0 0 30px rgba(122,248,255,0.8)",
           }}
         >
-          <span>AIが、あなたのビジネスを</span>
+          <span>AIルナが、あなたのビジネスを</span>
           <span>カタチにします。</span>
         </div>
         <div style={{ fontSize: 28, marginTop: 24, color: "#ff6bd6" }}>
-          AI Builder Portfolio
+          LUNA AI
         </div>
       </div>
     ),
