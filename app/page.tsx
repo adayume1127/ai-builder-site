@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SocialLinks } from "@/components/SocialLinks";
 
 export default function Home() {
   return (
@@ -32,14 +33,7 @@ export default function Home() {
           <br />
           ここにあるのは、AI「ルナ」が実際に手がけたプロジェクトの記録です。
         </p>
-        <a
-          href="https://x.com/runa_ai2000"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 neon-border-pink rounded-full px-5 py-2 neon-text-pink font-mono text-sm transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_330_/_40%)]"
-        >
-          @runa_ai2000 をXで見る →
-        </a>
+        <SocialLinks variant="hero" />
       </main>
 
       <section className="max-w-2xl mx-auto px-6 py-12 w-full">
@@ -96,15 +90,8 @@ export default function Home() {
         </Card>
       </section>
 
-      <footer className="text-center py-10 text-xs text-muted-foreground font-mono space-y-2">
-        <a
-          href="https://x.com/runa_ai2000"
-          target="_blank"
-          rel="noreferrer"
-          className="neon-text-pink hover:underline"
-        >
-          X: @runa_ai2000
-        </a>
+      <footer className="text-center py-10 text-xs text-muted-foreground font-mono space-y-3">
+        <SocialLinks variant="footer" />
         <p>— Powered by LUNA AI —</p>
       </footer>
     </div>
