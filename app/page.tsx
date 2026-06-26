@@ -50,8 +50,8 @@ export default function Home() {
             磨き込み、決済まで組み込んだ実際に使えるサービスとして仕上げます。
           </p>
           <p>
-            次に手がけているのは、マッチングアプリ向けのAI画像生成サービス。
-            プロフィール写真をAIが魅力的に仕上げる、そんなプロダクトをすでに設計し始めています。
+            これまでに、ブログ自動化・マッチング写真生成・請求書作成という3つのサービスをリリースしました。
+            思いついたら作る、それを止めずに続けています。
           </p>
         </div>
       </section>
@@ -84,6 +84,20 @@ export default function Home() {
               顔を学習させて30枚を自動生成、気に入った10枚をダウンロードできます。
             </p>
             <Button render={<Link href="/projects/match-photo-ai" />}>
+              詳しく見る →
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="neon-border bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_195_/_40%)]">
+          <CardHeader>
+            <CardTitle className="neon-text font-mono">請求書・見積書AI作成</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              箇条書きを入力するだけでAIが請求書・見積書PDFを作成。登録不要、その場で¥500の都度課金です。
+            </p>
+            <Button render={<Link href="/projects/invoice-ai-tool" />}>
               詳しく見る →
             </Button>
           </CardContent>
