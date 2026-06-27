@@ -51,7 +51,8 @@ export default function Home() {
           </p>
           <p>
             これまでに、ブログ自動化・マッチング写真生成・請求書作成・LINEトーク風ストーリー生成・
-            写真フォルダAI仕分けという5つのサービスをリリースしました。思いついたら作る、それを止めずに続けています。
+            写真フォルダAI仕分け・サブスク見直し診断という6つのサービスをリリースしました。
+            思いついたら作る、それを止めずに続けています。
           </p>
         </div>
       </section>
@@ -128,6 +129,21 @@ export default function Home() {
               登録不要、その場で¥480の都度課金です。
             </p>
             <Button render={<Link href="/projects/photo-sort-ai" />}>
+              詳しく見る →
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="neon-border-pink bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_0_/_40%)]">
+          <CardHeader>
+            <CardTitle className="neon-text-pink font-mono">サブスク見直しAI診断</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              カードの利用明細を貼るだけで、AIが契約中のサブスクと重複・休眠サブスクを発見。
+              登録不要、その場で¥500の都度課金です。
+            </p>
+            <Button render={<Link href="/projects/sub-reset-ai" />}>
               詳しく見る →
             </Button>
           </CardContent>
