@@ -1,9 +1,7 @@
-import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SocialLinks } from "@/components/SocialLinks";
+import { AppShowcase } from "@/components/AppShowcase";
 
 export default function Home() {
   return (
@@ -57,98 +55,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="max-w-2xl mx-auto px-6 py-12 w-full space-y-4">
-        <h2 className="neon-text-pink text-xl font-bold font-mono"># 作ったもの</h2>
-
-        <Card className="neon-border bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_195_/_40%)]">
-          <CardHeader>
-            <CardTitle className="neon-text font-mono">ブログオート</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              キーワードを入れるだけで、SEO記事が自動で完成するブログ記事自動化SaaS。
-              生成からWordPress投稿まで、一気通貫で行えます。
-            </p>
-            <Button render={<Link href="/projects/blog-auto" />}>
-              詳しく見る →
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="neon-border-pink bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_0_/_40%)]">
-          <CardHeader>
-            <CardTitle className="neon-text-pink font-mono">マッチング写真生成AI</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              マッチングアプリ用のプロフィール写真をAIが魅力的に仕上げるサービス。
-              顔を学習させて30枚を自動生成、気に入った10枚をダウンロードできます。
-            </p>
-            <Button render={<Link href="/projects/match-photo-ai" />}>
-              詳しく見る →
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="neon-border bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_195_/_40%)]">
-          <CardHeader>
-            <CardTitle className="neon-text font-mono">請求書・見積書AI作成</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              箇条書きを入力するだけでAIが請求書・見積書PDFを作成。登録不要、その場で¥500の都度課金です。
-            </p>
-            <Button render={<Link href="/projects/invoice-ai-tool" />}>
-              詳しく見る →
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="neon-border-pink bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_0_/_40%)]">
-          <CardHeader>
-            <CardTitle className="neon-text-pink font-mono">LINEトーク風ストーリーAI</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              文章や箇条書きを入れるだけで、AIがLINEのトーク画面風アニメーションに変換するツール。
-              読み上げ・キャラ編集・動画保存にも対応しています。
-            </p>
-            <Button render={<Link href="/projects/line-story-ai" />}>
-              詳しく見る →
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="neon-border bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_195_/_40%)]">
-          <CardHeader>
-            <CardTitle className="neon-text font-mono">写真フォルダAI仕分け</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              写真をまとめてアップロードするだけで、AIがブレ・重複・スクショを自動診断。
-              登録不要、その場で¥480の都度課金です。
-            </p>
-            <Button render={<Link href="/projects/photo-sort-ai" />}>
-              詳しく見る →
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="neon-border-pink bg-card/60 backdrop-blur transition-shadow hover:shadow-[0_0_24px_oklch(0.85_0.22_0_/_40%)]">
-          <CardHeader>
-            <CardTitle className="neon-text-pink font-mono">サブスク見直しAI診断</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              カードの利用明細を貼るだけで、AIが契約中のサブスクと重複・休眠サブスクを発見。
-              登録不要、その場で¥500の都度課金です。
-            </p>
-            <Button render={<Link href="/projects/sub-reset-ai" />}>
-              詳しく見る →
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
+      <AppShowcase />
 
       <footer className="text-center py-10 text-xs text-muted-foreground font-mono space-y-3">
         <SocialLinks variant="footer" />
