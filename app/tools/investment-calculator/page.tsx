@@ -21,7 +21,7 @@ function formatYearsMonths(totalMonths: number) {
   return `${y}年${m}ヶ月`;
 }
 
-type Mode = "fromGoal" | "fromMonthly";
+type Mode = "fromGoal" | "fromMonthly" | "coastFire";
 
 export default function InvestmentCalculatorPage() {
   const [mode, setMode] = useState<Mode>("fromGoal");
@@ -37,6 +37,14 @@ export default function InvestmentCalculatorPage() {
   const [years2, setYears2] = useState("20");
   const [annualRate2, setAnnualRate2] = useState("4");
   const [currentAssetsMan2, setCurrentAssetsMan2] = useState("0");
+
+  // 「コーストFIRE」モード(単位: 万円)
+  const [currentAge, setCurrentAge] = useState("25");
+  const [retireAge, setRetireAge] = useState("60");
+  const [coastFinalGoalMan, setCoastFinalGoalMan] = useState("10000");
+  const [coastCurrentAssetsMan, setCoastCurrentAssetsMan] = useState("1000");
+  const [investYears, setInvestYears] = useState("10");
+  const [coastAnnualRate, setCoastAnnualRate] = useState("4");
 
   const resultFromGoal = useMemo(() => {
     const goalNum = Number(goalMan) * 10000;
@@ -106,6 +114,55 @@ export default function InvestmentCalculatorPage() {
     };
   }, [monthlyMan, years2, annualRate2, currentAssetsMan2]);
 
+  const resultCoastFire = useMemo(() => {
+    const currentAgeNum = Number(currentAge);
+    const retireAgeNum = Number(retireAge);
+    const finalGoalNum = Number(coastFinalGoalMan) * 10000;
+    const currentAssetsNum = (Number(coastCurrentAssetsMan) || 0) * 10000;
+    const investYearsNum = Number(investYears);
+    const rateNum = Number(coastAnnualRate);
+
+    if (!Number.isFinite(currentAgeNum) || currentAgeNum <= 0) return null;
+    if (!Number.isFinite(retireAgeNum) || retireAgeNum <= currentAgeNum) return null;
+    if (!Number.isFinite(finalGoalNum) || finalGoalNum <= 0) return null;
+    if (!Number.isFinite(currentAssetsNum) || currentAssetsNum < 0) return null;
+    if (!Number.isFinite(investYearsNum) || investYearsNum <= 0) return null;
+    if (!Number.isFinite(rateNum) || rateNum < 0) return null;
+
+    const totalYears = retireAgeNum - currentAgeNum;
+    if (investYearsNum > totalYears) return null; // 投資期間がリタイアまでの期間を超えている
+
+    const coastYears = totalYears - investYearsNum;
+    const investMonths = Math.round(investYearsNum * 12);
+    const coastMonths = Math.round(coastYears * 12);
+    const monthlyRate = rateNum / 100 / 12;
+
+    // コースト開始時点(投資をやめる年齢)で必要な資産額を、最終目標額から逆算
+    const coastTargetAmount =
+      monthlyRate === 0 ? finalGoalNum : finalGoalNum / Math.pow(1 + monthlyRate, coastMonths);
+
+    // その必要額に対し、現在資産+今後の積立でどれだけ毎月積み立てればいいか
+    const futureValueOfCurrentAssets = currentAssetsNum * Math.pow(1 + monthlyRate, investMonths);
+    const remaining = Math.max(0, coastTargetAmount - futureValueOfCurrentAssets);
+    const monthlyPayment =
+      remaining === 0
+        ? 0
+        : monthlyRate === 0
+          ? remaining / investMonths
+          : (remaining * monthlyRate) / (Math.pow(1 + monthlyRate, investMonths) - 1);
+
+    const totalContribution = monthlyPayment * investMonths;
+
+    return {
+      coastAge: currentAgeNum + investYearsNum,
+      coastTargetAmount,
+      monthlyPayment,
+      totalContribution,
+      coastYears,
+      alreadyAchievable: remaining === 0,
+    };
+  }, [currentAge, retireAge, coastFinalGoalMan, coastCurrentAssetsMan, investYears, coastAnnualRate]);
+
   return (
     <div className="flex flex-col flex-1">
       <main className="max-w-2xl mx-auto px-6 py-16 space-y-8">
@@ -122,7 +179,7 @@ export default function InvestmentCalculatorPage() {
           <p className="text-muted-foreground">複利での積立計算を2つの方法でシミュレーションできます。</p>
         </div>
 
-        <div className="flex gap-2 font-mono text-sm justify-center">
+        <div className="flex flex-wrap gap-2 font-mono text-sm justify-center">
           <button
             type="button"
             onClick={() => setMode("fromGoal")}
@@ -145,9 +202,20 @@ export default function InvestmentCalculatorPage() {
           >
             積立額から将来額を計算
           </button>
+          <button
+            type="button"
+            onClick={() => setMode("coastFire")}
+            className={`rounded-full px-4 py-2 ${
+              mode === "coastFire"
+                ? "neon-border-pink neon-text-pink"
+                : "border border-white/15 text-muted-foreground"
+            }`}
+          >
+            コーストFIRE
+          </button>
         </div>
 
-        {mode === "fromGoal" ? (
+        {mode === "fromGoal" && (
           <>
             <p className="text-center text-muted-foreground text-sm">
               目標額・期間・年利を入れると、毎月いくら積み立てればいいかを計算します。
@@ -250,7 +318,9 @@ export default function InvestmentCalculatorPage() {
               </CardContent>
             </Card>
           </>
-        ) : (
+        )}
+
+        {mode === "fromMonthly" && (
           <>
             <p className="text-center text-muted-foreground text-sm">
               毎月の積立額・年利・期間を入れると、将来いくらになるかを計算します。
@@ -341,6 +411,143 @@ export default function InvestmentCalculatorPage() {
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     積立額・年数・年利を正しく入力してください。
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {mode === "coastFire" && (
+          <>
+            <p className="text-center text-muted-foreground text-sm">
+              「あと何年だけ積極的に積み立てて、その後は追加投資せず複利だけで目標に到達する」コーストFIREの計算です。
+            </p>
+
+            <Card className="neon-border bg-card/60 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="font-mono text-base">条件を入力</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground font-mono">現在の年齢</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={currentAge}
+                    onChange={(e) => setCurrentAge(e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground font-mono">
+                    最終的に目標額に到達したい年齢
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={retireAge}
+                    onChange={(e) => setRetireAge(e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground font-mono">最終的に欲しい金額(万円)</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={coastFinalGoalMan}
+                    onChange={(e) => setCoastFinalGoalMan(e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground font-mono">
+                    現時点での自分の資産(万円)
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={coastCurrentAssetsMan}
+                    onChange={(e) => setCoastCurrentAssetsMan(e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground font-mono">
+                    あと何年間、毎月同じ額を投資するか
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={investYears}
+                    onChange={(e) => setInvestYears(e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    この期間が終わったら追加投資はやめて、複利運用だけで目標到達を目指します。
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground font-mono">想定年利(%)</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    value={coastAnnualRate}
+                    onChange={(e) => setCoastAnnualRate(e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+                  />
+                  <p className="text-xs text-muted-foreground">デフォルトは4%。自由に変更できます。</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="neon-border-pink bg-card/60 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="font-mono text-base neon-text-pink">計算結果</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {resultCoastFire ? (
+                  <div className="space-y-3 font-mono">
+                    {resultCoastFire.alreadyAchievable && (
+                      <p className="text-xs neon-text">
+                        現在の資産だけで到達できそうです🎉(追加の積立は0円で計算しています)
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">毎月の積立額</span>
+                      <span className="neon-text-pink text-2xl font-bold">
+                        {formatMan(resultCoastFire.monthlyPayment, 1)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">投資をやめる年齢</span>
+                      <span>{resultCoastFire.coastAge}歳</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        その時点で必要な資産額(コースト目標額)
+                      </span>
+                      <span>{formatMan(resultCoastFire.coastTargetAmount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">自分で積み立てる総額</span>
+                      <span>{formatMan(resultCoastFire.totalContribution)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">その後、追加投資なしで運用する期間</span>
+                      <span>{resultCoastFire.coastYears}年</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    年齢・目標額・投資期間を正しく入力してください(投資期間はリタイアまでの年数以下にしてください)。
                   </p>
                 )}
               </CardContent>
