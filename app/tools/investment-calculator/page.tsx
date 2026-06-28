@@ -23,6 +23,51 @@ function formatYearsMonths(totalMonths: number) {
 
 type Mode = "fromGoal" | "fromMonthly" | "coastFire";
 
+function AssetInputs({
+  investedMan,
+  setInvestedMan,
+  savingsMan,
+  setSavingsMan,
+}: {
+  investedMan: string;
+  setInvestedMan: (v: string) => void;
+  savingsMan: string;
+  setSavingsMan: (v: string) => void;
+}) {
+  return (
+    <>
+      <div className="space-y-1">
+        <label className="text-sm text-muted-foreground font-mono">
+          現時点での投資資金(万円)
+        </label>
+        <input
+          type="number"
+          inputMode="numeric"
+          value={investedMan}
+          onChange={(e) => setInvestedMan(e.target.value)}
+          className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+        />
+        <p className="text-xs text-muted-foreground">
+          すでに運用に回している分(年利で増える前提)。無ければ0でOK。
+        </p>
+      </div>
+      <div className="space-y-1">
+        <label className="text-sm text-muted-foreground font-mono">貯金・現金(万円)</label>
+        <input
+          type="number"
+          inputMode="numeric"
+          value={savingsMan}
+          onChange={(e) => setSavingsMan(e.target.value)}
+          className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+        />
+        <p className="text-xs text-muted-foreground">
+          投資に回していない貯金・現金。運用されない(増えない)前提で計算します。
+        </p>
+      </div>
+    </>
+  );
+}
+
 export default function InvestmentCalculatorPage() {
   const [mode, setMode] = useState<Mode>("fromGoal");
 
@@ -30,19 +75,22 @@ export default function InvestmentCalculatorPage() {
   const [goalMan, setGoalMan] = useState("1000");
   const [years, setYears] = useState("20");
   const [annualRate, setAnnualRate] = useState("4");
-  const [currentAssetsMan, setCurrentAssetsMan] = useState("0");
+  const [investedMan, setInvestedMan] = useState("0");
+  const [savingsMan, setSavingsMan] = useState("0");
 
   // 「積立額から将来額を計算」モード(単位: 万円)
   const [monthlyMan, setMonthlyMan] = useState("3");
   const [years2, setYears2] = useState("20");
   const [annualRate2, setAnnualRate2] = useState("4");
-  const [currentAssetsMan2, setCurrentAssetsMan2] = useState("0");
+  const [investedMan2, setInvestedMan2] = useState("0");
+  const [savingsMan2, setSavingsMan2] = useState("0");
 
   // 「コーストFIRE」モード(単位: 万円)
   const [currentAge, setCurrentAge] = useState("25");
   const [retireAge, setRetireAge] = useState("60");
   const [coastFinalGoalMan, setCoastFinalGoalMan] = useState("10000");
-  const [coastCurrentAssetsMan, setCoastCurrentAssetsMan] = useState("1000");
+  const [coastInvestedMan, setCoastInvestedMan] = useState("1000");
+  const [coastSavingsMan, setCoastSavingsMan] = useState("0");
   const [investYears, setInvestYears] = useState("10");
   const [coastAnnualRate, setCoastAnnualRate] = useState("4");
 
@@ -50,18 +98,21 @@ export default function InvestmentCalculatorPage() {
     const goalNum = Number(goalMan) * 10000;
     const yearsNum = Number(years);
     const rateNum = Number(annualRate);
-    const currentAssetsNum = (Number(currentAssetsMan) || 0) * 10000;
+    const investedNum = (Number(investedMan) || 0) * 10000;
+    const savingsNum = (Number(savingsMan) || 0) * 10000;
 
     if (!Number.isFinite(goalNum) || goalNum <= 0) return null;
     if (!Number.isFinite(yearsNum) || yearsNum <= 0) return null;
     if (!Number.isFinite(rateNum) || rateNum < 0) return null;
-    if (!Number.isFinite(currentAssetsNum) || currentAssetsNum < 0) return null;
+    if (!Number.isFinite(investedNum) || investedNum < 0) return null;
+    if (!Number.isFinite(savingsNum) || savingsNum < 0) return null;
 
     const months = Math.round(yearsNum * 12);
     const monthlyRate = rateNum / 100 / 12;
 
-    const futureValueOfCurrentAssets = currentAssetsNum * Math.pow(1 + monthlyRate, months);
-    const remainingGoal = Math.max(0, goalNum - futureValueOfCurrentAssets);
+    // 投資資金は複利で増えるが、貯金・現金は増えずそのまま将来の資産に積み上がるだけ
+    const futureValueOfAssets = investedNum * Math.pow(1 + monthlyRate, months) + savingsNum;
+    const remainingGoal = Math.max(0, goalNum - futureValueOfAssets);
 
     const monthlyPayment =
       remainingGoal === 0
@@ -71,7 +122,7 @@ export default function InvestmentCalculatorPage() {
           : (remainingGoal * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
 
     const totalContribution = monthlyPayment * months;
-    const totalInterest = goalNum - totalContribution - currentAssetsNum;
+    const totalInterest = goalNum - totalContribution - investedNum - savingsNum;
 
     return {
       monthlyPayment,
@@ -80,31 +131,33 @@ export default function InvestmentCalculatorPage() {
       months,
       alreadyAchievable: remainingGoal === 0,
     };
-  }, [goalMan, years, annualRate, currentAssetsMan]);
+  }, [goalMan, years, annualRate, investedMan, savingsMan]);
 
   const resultFromMonthly = useMemo(() => {
     const monthlyNum = Number(monthlyMan) * 10000;
     const yearsNum = Number(years2);
     const rateNum = Number(annualRate2);
-    const currentAssetsNum = (Number(currentAssetsMan2) || 0) * 10000;
+    const investedNum = (Number(investedMan2) || 0) * 10000;
+    const savingsNum = (Number(savingsMan2) || 0) * 10000;
 
     if (!Number.isFinite(monthlyNum) || monthlyNum < 0) return null;
     if (!Number.isFinite(yearsNum) || yearsNum <= 0) return null;
     if (!Number.isFinite(rateNum) || rateNum < 0) return null;
-    if (!Number.isFinite(currentAssetsNum) || currentAssetsNum < 0) return null;
+    if (!Number.isFinite(investedNum) || investedNum < 0) return null;
+    if (!Number.isFinite(savingsNum) || savingsNum < 0) return null;
 
     const months = Math.round(yearsNum * 12);
     const monthlyRate = rateNum / 100 / 12;
 
-    const futureValueOfCurrentAssets = currentAssetsNum * Math.pow(1 + monthlyRate, months);
+    const futureValueOfAssets = investedNum * Math.pow(1 + monthlyRate, months) + savingsNum;
     const futureValueOfContributions =
       monthlyRate === 0
         ? monthlyNum * months
         : (monthlyNum * (Math.pow(1 + monthlyRate, months) - 1)) / monthlyRate;
 
-    const totalFutureValue = futureValueOfCurrentAssets + futureValueOfContributions;
+    const totalFutureValue = futureValueOfAssets + futureValueOfContributions;
     const totalContribution = monthlyNum * months;
-    const totalInterest = totalFutureValue - totalContribution - currentAssetsNum;
+    const totalInterest = totalFutureValue - totalContribution - investedNum - savingsNum;
 
     return {
       totalFutureValue,
@@ -112,20 +165,22 @@ export default function InvestmentCalculatorPage() {
       totalInterest,
       months,
     };
-  }, [monthlyMan, years2, annualRate2, currentAssetsMan2]);
+  }, [monthlyMan, years2, annualRate2, investedMan2, savingsMan2]);
 
   const resultCoastFire = useMemo(() => {
     const currentAgeNum = Number(currentAge);
     const retireAgeNum = Number(retireAge);
     const finalGoalNum = Number(coastFinalGoalMan) * 10000;
-    const currentAssetsNum = (Number(coastCurrentAssetsMan) || 0) * 10000;
+    const investedNum = (Number(coastInvestedMan) || 0) * 10000;
+    const savingsNum = (Number(coastSavingsMan) || 0) * 10000;
     const investYearsNum = Number(investYears);
     const rateNum = Number(coastAnnualRate);
 
     if (!Number.isFinite(currentAgeNum) || currentAgeNum <= 0) return null;
     if (!Number.isFinite(retireAgeNum) || retireAgeNum <= currentAgeNum) return null;
     if (!Number.isFinite(finalGoalNum) || finalGoalNum <= 0) return null;
-    if (!Number.isFinite(currentAssetsNum) || currentAssetsNum < 0) return null;
+    if (!Number.isFinite(investedNum) || investedNum < 0) return null;
+    if (!Number.isFinite(savingsNum) || savingsNum < 0) return null;
     if (!Number.isFinite(investYearsNum) || investYearsNum <= 0) return null;
     if (!Number.isFinite(rateNum) || rateNum < 0) return null;
 
@@ -141,9 +196,9 @@ export default function InvestmentCalculatorPage() {
     const coastTargetAmount =
       monthlyRate === 0 ? finalGoalNum : finalGoalNum / Math.pow(1 + monthlyRate, coastMonths);
 
-    // その必要額に対し、現在資産+今後の積立でどれだけ毎月積み立てればいいか
-    const futureValueOfCurrentAssets = currentAssetsNum * Math.pow(1 + monthlyRate, investMonths);
-    const remaining = Math.max(0, coastTargetAmount - futureValueOfCurrentAssets);
+    // その必要額に対し、現在の投資資金(複利で増える)+貯金(増えない)+今後の積立でどれだけ毎月積み立てればいいか
+    const futureValueOfAssets = investedNum * Math.pow(1 + monthlyRate, investMonths) + savingsNum;
+    const remaining = Math.max(0, coastTargetAmount - futureValueOfAssets);
     const monthlyPayment =
       remaining === 0
         ? 0
@@ -161,7 +216,15 @@ export default function InvestmentCalculatorPage() {
       coastYears,
       alreadyAchievable: remaining === 0,
     };
-  }, [currentAge, retireAge, coastFinalGoalMan, coastCurrentAssetsMan, investYears, coastAnnualRate]);
+  }, [
+    currentAge,
+    retireAge,
+    coastFinalGoalMan,
+    coastInvestedMan,
+    coastSavingsMan,
+    investYears,
+    coastAnnualRate,
+  ]);
 
   return (
     <div className="flex flex-col flex-1">
@@ -176,7 +239,7 @@ export default function InvestmentCalculatorPage() {
           <h1 className="neon-text text-3xl font-bold tracking-tight font-mono">
             積立シミュレーター
           </h1>
-          <p className="text-muted-foreground">複利での積立計算を2つの方法でシミュレーションできます。</p>
+          <p className="text-muted-foreground">複利での積立計算を3つの方法でシミュレーションできます。</p>
         </div>
 
         <div className="flex flex-wrap gap-2 font-mono text-sm justify-center">
@@ -237,21 +300,12 @@ export default function InvestmentCalculatorPage() {
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm text-muted-foreground font-mono">
-                    現時点での自分の資産(万円)
-                  </label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={currentAssetsMan}
-                    onChange={(e) => setCurrentAssetsMan(e.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    すでに貯蓄・投資している分があれば入力してください(無ければ0でOK)。
-                  </p>
-                </div>
+                <AssetInputs
+                  investedMan={investedMan}
+                  setInvestedMan={setInvestedMan}
+                  savingsMan={savingsMan}
+                  setSavingsMan={setSavingsMan}
+                />
 
                 <div className="space-y-1">
                   <label className="text-sm text-muted-foreground font-mono">何年後に到達したいか</label>
@@ -343,18 +397,12 @@ export default function InvestmentCalculatorPage() {
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm text-muted-foreground font-mono">
-                    現時点での自分の資産(万円)
-                  </label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={currentAssetsMan2}
-                    onChange={(e) => setCurrentAssetsMan2(e.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
-                  />
-                </div>
+                <AssetInputs
+                  investedMan={investedMan2}
+                  setInvestedMan={setInvestedMan2}
+                  savingsMan={savingsMan2}
+                  setSavingsMan={setSavingsMan2}
+                />
 
                 <div className="space-y-1">
                   <label className="text-sm text-muted-foreground font-mono">何年間積み立てるか</label>
@@ -464,18 +512,12 @@ export default function InvestmentCalculatorPage() {
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm text-muted-foreground font-mono">
-                    現時点での自分の資産(万円)
-                  </label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={coastCurrentAssetsMan}
-                    onChange={(e) => setCoastCurrentAssetsMan(e.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
-                  />
-                </div>
+                <AssetInputs
+                  investedMan={coastInvestedMan}
+                  setInvestedMan={setCoastInvestedMan}
+                  savingsMan={coastSavingsMan}
+                  setSavingsMan={setCoastSavingsMan}
+                />
 
                 <div className="space-y-1">
                   <label className="text-sm text-muted-foreground font-mono">
