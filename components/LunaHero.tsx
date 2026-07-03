@@ -61,7 +61,7 @@ export function LunaHero() {
         </div>
 
         {/* ===== Right: Luna character ===== */}
-        <div className="relative flex-shrink-0" style={{ width: 300, height: 520 }}>
+        <div className="relative flex-shrink-0" style={{ width: 320, height: 320 }}>
 
           {/* Purple / blue glow aura */}
           <div
@@ -104,30 +104,14 @@ export function LunaHero() {
             ))}
           </div>
 
-          {/* Character image with edge mask + float animation */}
-          <div
-            className="absolute inset-0 overflow-hidden rounded-2xl luna-float"
-            style={{
-              maskImage:
-                "radial-gradient(ellipse 86% 90% at 50% 42%, black 52%, transparent 100%)",
-              WebkitMaskImage:
-                "radial-gradient(ellipse 86% 90% at 50% 42%, black 52%, transparent 100%)",
-            }}
-          >
+          {/* Avatar image with float animation */}
+          <div className="absolute inset-0 luna-float">
             <Image
-              src="/luna-character.png"
+              src="/luna-avatar.png"
               alt="ルナ"
               fill
               priority
-              style={{ objectFit: "cover", objectPosition: "18% top" }}
-            />
-            {/* Bottom gradient fade into page background */}
-            <div
-              className="absolute bottom-0 left-0 right-0 h-52 pointer-events-none"
-              style={{
-                background:
-                  "linear-gradient(to top, oklch(0.12 0.02 280) 0%, oklch(0.12 0.02 280 / 55%) 40%, transparent 100%)",
-              }}
+              style={{ objectFit: "contain" }}
             />
           </div>
 
