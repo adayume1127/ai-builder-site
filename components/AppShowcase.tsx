@@ -8,11 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const TAROT_FAN = [
-  { src: "/tarot/00_the_fool.png",    rotate: -20, x: -64, z: 1 },
-  { src: "/tarot/06_the_lovers.png",  rotate: -10, x: -32, z: 2 },
+  { src: "/tarot/00_the_fool.png",    rotate: -22, x: -80, z: 1 },
+  { src: "/tarot/06_the_lovers.png",  rotate: -11, x: -40, z: 2 },
   { src: "/tarot/11_justice.png",     rotate: 0,   x: 0,   z: 3 },
-  { src: "/tarot/17_the_star.png",    rotate: 10,  x: 32,  z: 2 },
-  { src: "/tarot/21_the_world.png",   rotate: 20,  x: 64,  z: 1 },
+  { src: "/tarot/17_the_star.png",    rotate: 11,  x: 40,  z: 2 },
+  { src: "/tarot/21_the_world.png",   rotate: 22,  x: 80,  z: 1 },
 ];
 
 function TarotFan() {
@@ -23,21 +23,21 @@ function TarotFan() {
           key={i}
           className="absolute bottom-0"
           style={{
-            width: 52,
-            height: 88,
+            width: 72,
+            height: 118,
             transform: `rotate(${c.rotate}deg) translateX(${c.x}px)`,
             zIndex: c.z,
             transformOrigin: "bottom center",
           }}
         >
           <div
-            className="w-full h-full rounded-lg overflow-hidden"
+            className="w-full h-full rounded-xl overflow-hidden"
             style={{
-              border: "1px solid rgba(234,179,8,0.6)",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.6), 0 0 8px rgba(168,85,247,0.2)",
+              border: "1px solid rgba(234,179,8,0.7)",
+              boxShadow: "0 6px 20px rgba(0,0,0,0.7), 0 0 12px rgba(168,85,247,0.3)",
             }}
           >
-            <Image src={c.src} alt="" fill sizes="52px" style={{ objectFit: "cover" }} />
+            <Image src={c.src} alt="" fill sizes="72px" style={{ objectFit: "cover" }} />
           </div>
         </div>
       ))}
