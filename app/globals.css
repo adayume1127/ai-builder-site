@@ -191,3 +191,32 @@
   0% { background-position: -200% center; }
   100% { background-position: 200% center; }
 }
+
+/* ===== Luna character animations ===== */
+
+@keyframes luna-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-16px); }
+}
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.06; transform: scale(0.7); }
+  50%       { opacity: 1;    transform: scale(1.6); }
+}
+
+@keyframes luna-glow-pulse {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50%       { opacity: 1;    transform: scale(1.07); }
+}
+
+@keyframes luna-sparkle {
+  0%   { opacity: 0.35; transform: rotate(0deg)   scale(0.85); }
+  50%  { opacity: 1;    transform: rotate(180deg) scale(1.35); }
+  100% { opacity: 0.35; transform: rotate(360deg) scale(0.85); }
+}
+
+.luna-float        { animation: luna-float 7s ease-in-out infinite; }
+.luna-glow-pulse   { animation: luna-glow-pulse 4.5s ease-in-out infinite; }
+.luna-sparkle-1    { animation: luna-sparkle 4s   linear infinite; }
+.luna-sparkle-2    { animation: luna-sparkle 3s   linear infinite reverse; animation-delay: 1.2s; }
+.luna-sparkle-3    { animation: luna-sparkle 5.5s linear infinite; animation-delay: 2.5s; }
