@@ -162,4 +162,32 @@
       0 0 8px oklch(0.85 0.22 330 / 35%),
       inset 0 0 12px oklch(0.85 0.22 330 / 8%);
   }
+  .gold-text {
+    color: #FFD700;
+    text-shadow:
+      0 0 4px rgba(255,215,0,0.7),
+      0 0 18px rgba(255,215,0,0.4),
+      0 0 40px rgba(234,179,8,0.2);
+  }
+  .gold-border {
+    border: 1px solid rgba(234,179,8,0.45);
+    box-shadow:
+      0 0 8px rgba(234,179,8,0.25),
+      inset 0 0 12px rgba(234,179,8,0.06);
+  }
+  .shimmer-gold {
+    background: linear-gradient(90deg, #FFD700, #fff7cc, #FFD700, #e8c000, #FFD700);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer-anim 3s linear infinite;
+  }
+  .font-cinzel { font-family: var(--font-cinzel), serif; }
+  .font-zen { font-family: var(--font-zen), serif; }
+}
+
+@keyframes shimmer-anim {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }

@@ -2,9 +2,48 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+
+const TAROT_FAN = [
+  { src: "/tarot/00_the_fool.png",    rotate: -20, x: -64, z: 1 },
+  { src: "/tarot/06_the_lovers.png",  rotate: -10, x: -32, z: 2 },
+  { src: "/tarot/11_justice.png",     rotate: 0,   x: 0,   z: 3 },
+  { src: "/tarot/17_the_star.png",    rotate: 10,  x: 32,  z: 2 },
+  { src: "/tarot/21_the_world.png",   rotate: 20,  x: 64,  z: 1 },
+];
+
+function TarotFan() {
+  return (
+    <div className="relative flex justify-center items-end h-28 mb-2 pointer-events-none select-none">
+      {TAROT_FAN.map((c, i) => (
+        <div
+          key={i}
+          className="absolute bottom-0"
+          style={{
+            width: 52,
+            height: 88,
+            transform: `rotate(${c.rotate}deg) translateX(${c.x}px)`,
+            zIndex: c.z,
+            transformOrigin: "bottom center",
+          }}
+        >
+          <div
+            className="w-full h-full rounded-lg overflow-hidden"
+            style={{
+              border: "1px solid rgba(234,179,8,0.6)",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.6), 0 0 8px rgba(168,85,247,0.2)",
+            }}
+          >
+            <Image src={c.src} alt="" fill sizes="52px" style={{ objectFit: "cover" }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 type AppItem = {
   title: string;
@@ -13,9 +52,20 @@ type AppItem = {
   free: boolean;
   priceLabel: string;
   accent: "cyan" | "pink";
+  visual?: React.ReactNode;
 };
 
 const APPS: AppItem[] = [
+  {
+    title: "ルナタロット AI",
+    description:
+      "大アルカナ22枚のタロットカードをAIが深層解読。1枚引き・スリーカードスプレッド・テーマ別深層鑑定に対応。無料プランで1日1回、プレミアムで無制限に占えます。",
+    href: "/projects/tarot-ai",
+    free: false,
+    priceLabel: "¥500/月",
+    accent: "pink",
+    visual: <TarotFan />,
+  },
   {
     title: "ブログオート",
     description:
@@ -65,15 +115,6 @@ const APPS: AppItem[] = [
     href: "/projects/sub-reset-ai",
     free: false,
     priceLabel: "¥500都度課金",
-    accent: "pink",
-  },
-  {
-    title: "ルナタロット AI",
-    description:
-      "大アルカナ22枚のタロットカードをAIが深層解読。1枚引き・スリーカードスプレッド・テーマ別深層鑑定に対応。無料プランで1日1回、プレミアムで無制限に占えます。",
-    href: "/projects/tarot-ai",
-    free: false,
-    priceLabel: "¥500/月",
     accent: "pink",
   },
   {
@@ -153,6 +194,11 @@ export function AppShowcase() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {app.visual && (
+                <div className="rounded-xl overflow-hidden py-4" style={{ background: "linear-gradient(160deg, #0a0018, #0d0025)" }}>
+                  {app.visual}
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">{app.description}</p>
               <Button render={<Link href={app.href} />}>詳しく見る →</Button>
             </CardContent>
