@@ -68,6 +68,15 @@ const APPS: AppItem[] = [
     accent: "pink",
   },
   {
+    title: "ルナタロット AI",
+    description:
+      "大アルカナ22枚のタロットカードをAIが深層解読。1枚引き・スリーカードスプレッド・テーマ別深層鑑定に対応。無料プランで1日1回、プレミアムで無制限に占えます。",
+    href: "/projects/tarot-ai",
+    free: false,
+    priceLabel: "¥500/月",
+    accent: "pink",
+  },
+  {
     title: "積立シミュレーター",
     description:
       "目標額・積立額・コーストFIREなど、3つの方法で複利の積立計算ができるツール。会員登録不要、何度でも無料で使えます。",
