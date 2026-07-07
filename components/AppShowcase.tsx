@@ -15,6 +15,40 @@ const TAROT_FAN = [
   { src: "/tarot/21_the_world.png",   rotate: 22,  x: 80,  z: 1 },
 ];
 
+function FoolCard() {
+  return (
+    <div className="flex justify-center items-center py-4 pointer-events-none select-none">
+      <div className="relative" style={{ width: 130, height: 216 }}>
+        {/* Glow aura */}
+        <div
+          className="absolute rounded-2xl"
+          style={{
+            inset: "-16px",
+            background: "radial-gradient(ellipse 70% 70% at 50% 50%, rgba(124,58,237,0.55) 0%, rgba(59,130,246,0.3) 45%, transparent 75%)",
+            filter: "blur(18px)",
+            animation: "luna-glow-pulse 4s ease-in-out infinite",
+          }}
+        />
+        {/* Card frame */}
+        <div
+          className="relative w-full h-full rounded-xl overflow-hidden"
+          style={{
+            border: "1.5px solid rgba(234,179,8,0.85)",
+            boxShadow: "0 8px 36px rgba(0,0,0,0.85), 0 0 24px rgba(168,85,247,0.5), 0 0 48px rgba(234,179,8,0.18)",
+            animation: "luna-float 6s ease-in-out infinite",
+          }}
+        >
+          <Image src="/tarot/00_the_fool.png" alt="愚者" fill sizes="130px" style={{ objectFit: "cover" }} />
+        </div>
+        {/* Sparkles */}
+        <span className="absolute luna-sparkle-1" style={{ top: -10, right: -4, fontSize: 15, color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.9)" }}>✦</span>
+        <span className="absolute luna-sparkle-2" style={{ bottom: 12, left: -10, fontSize: 12, color: "#a5f3fc", textShadow: "0 0 8px rgba(165,243,252,0.9)" }}>✧</span>
+        <span className="absolute luna-sparkle-3" style={{ top: "40%", right: -14, fontSize: 10, color: "#e879f9", textShadow: "0 0 8px rgba(232,121,249,0.9)" }}>⋆</span>
+      </div>
+    </div>
+  );
+}
+
 function TarotFan() {
   return (
     <div className="relative flex justify-center items-end h-28 mb-2 pointer-events-none select-none">
@@ -116,6 +150,16 @@ const APPS: AppItem[] = [
     free: false,
     priceLabel: "¥500都度課金",
     accent: "pink",
+  },
+  {
+    title: "月夜タロット 放置ゲーム",
+    description:
+      "ルナが主役のガチャ＆放置系ゲーム。タロットカードを集めながら星の物語を紡ぐ、夜の冒険に出よう。会員登録不要・完全無料でプレイできます。",
+    href: "/projects/tsukiyo-tarot",
+    free: true,
+    priceLabel: "無料",
+    accent: "pink",
+    visual: <FoolCard />,
   },
   {
     title: "積立シミュレーター",
