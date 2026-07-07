@@ -15,36 +15,115 @@ const TAROT_FAN = [
   { src: "/tarot/21_the_world.png",   rotate: 22,  x: 80,  z: 1 },
 ];
 
-function FoolCard() {
+/* ───── 月夜タロット放置ゲーム カードファン ───── */
+const GAME_FAN = [
+  { src: null,                         rotate: -28, x: -108, z: 1, w: 54,  h: 90  }, // 謎カード
+  { src: "/tarot/17_the_star.png",     rotate: -14, x: -54,  z: 3, w: 65,  h: 108 }, // 星
+  { src: "/tarot/00_the_fool.png",     rotate:   0, x:   0,  z: 5, w: 80,  h: 132, sr: true }, // 愚者 SR
+  { src: "/tarot/21_the_world.png",    rotate:  14, x:  54,  z: 3, w: 65,  h: 108 }, // 世界
+  { src: null,                         rotate:  28, x: 108,  z: 1, w: 54,  h: 90  }, // 謎カード
+] as const;
+
+function MysteryCardBack({ w, h }: { w: number; h: number }) {
   return (
-    <div className="flex justify-center items-center py-4 pointer-events-none select-none">
-      <div className="relative" style={{ width: 130, height: 216 }}>
-        {/* Glow aura */}
+    <div
+      className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-1"
+      style={{
+        background: "linear-gradient(165deg, #0c001f 0%, #05001a 60%, #0a0030 100%)",
+        border: "1px solid rgba(165,243,252,0.25)",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.85)",
+      }}
+    >
+      <span style={{ fontSize: Math.round(h * 0.28), color: "rgba(165,243,252,0.22)", lineHeight: 1 }}>☽</span>
+      <span
+        style={{
+          fontSize: Math.round(h * 0.18),
+          color: "rgba(234,179,8,0.30)",
+          fontFamily: "monospace",
+          fontWeight: "bold",
+          lineHeight: 1,
+          textShadow: "0 0 6px rgba(234,179,8,0.2)",
+        }}
+      >
+        ?
+      </span>
+    </div>
+  );
+}
+
+function GameCardFan() {
+  return (
+    <div className="relative flex justify-center items-end pointer-events-none select-none" style={{ height: 172, marginBottom: 8 }}>
+      {GAME_FAN.map((c, i) => (
         <div
-          className="absolute rounded-2xl"
+          key={i}
+          className="absolute bottom-0"
           style={{
-            inset: "-16px",
-            background: "radial-gradient(ellipse 70% 70% at 50% 50%, rgba(124,58,237,0.55) 0%, rgba(59,130,246,0.3) 45%, transparent 75%)",
-            filter: "blur(18px)",
-            animation: "luna-glow-pulse 4s ease-in-out infinite",
-          }}
-        />
-        {/* Card frame */}
-        <div
-          className="relative w-full h-full rounded-xl overflow-hidden"
-          style={{
-            border: "1.5px solid rgba(234,179,8,0.85)",
-            boxShadow: "0 8px 36px rgba(0,0,0,0.85), 0 0 24px rgba(168,85,247,0.5), 0 0 48px rgba(234,179,8,0.18)",
-            animation: "luna-float 6s ease-in-out infinite",
+            width: c.w,
+            height: c.h,
+            transform: `rotate(${c.rotate}deg) translateX(${c.x}px)`,
+            zIndex: c.z,
+            transformOrigin: "bottom center",
           }}
         >
-          <Image src="/tarot/00_the_fool.png" alt="愚者" fill sizes="130px" style={{ objectFit: "cover" }} />
+          {c.src ? (
+            <div className="relative w-full h-full">
+              {/* Center card glow */}
+              {"sr" in c && c.sr && (
+                <div
+                  className="absolute rounded-xl"
+                  style={{
+                    inset: "-10px",
+                    background: "radial-gradient(ellipse 70% 70% at 50% 55%, rgba(124,58,237,0.6) 0%, rgba(59,130,246,0.35) 45%, transparent 75%)",
+                    filter: "blur(14px)",
+                    animation: "luna-glow-pulse 3.5s ease-in-out infinite",
+                  }}
+                />
+              )}
+              <div
+                className="relative w-full h-full rounded-xl overflow-hidden"
+                style={{
+                  border: "sr" in c && c.sr
+                    ? "1.5px solid rgba(234,179,8,0.95)"
+                    : "1px solid rgba(234,179,8,0.6)",
+                  boxShadow: "sr" in c && c.sr
+                    ? "0 8px 32px rgba(0,0,0,0.9), 0 0 22px rgba(168,85,247,0.55), 0 0 44px rgba(234,179,8,0.25)"
+                    : "0 5px 16px rgba(0,0,0,0.8), 0 0 10px rgba(168,85,247,0.2)",
+                  animation: "sr" in c && c.sr ? "luna-float 6s ease-in-out infinite" : undefined,
+                }}
+              >
+                <Image src={c.src} alt="" fill sizes={`${c.w}px`} style={{ objectFit: "cover" }} />
+              </div>
+              {/* SECRET RARE バッジ */}
+              {"sr" in c && c.sr && (
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 font-mono font-bold whitespace-nowrap"
+                  style={{
+                    top: -14,
+                    fontSize: 9,
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    background: "linear-gradient(90deg, #581c87, #1e3a8a)",
+                    border: "1px solid rgba(234,179,8,0.85)",
+                    color: "#FFD700",
+                    letterSpacing: "0.1em",
+                    boxShadow: "0 0 12px rgba(124,58,237,0.8), 0 0 24px rgba(234,179,8,0.35)",
+                    animation: "luna-glow-pulse 2s ease-in-out infinite",
+                  }}
+                >
+                  ✦ SECRET RARE
+                </div>
+              )}
+            </div>
+          ) : (
+            <MysteryCardBack w={c.w} h={c.h} />
+          )}
         </div>
-        {/* Sparkles */}
-        <span className="absolute luna-sparkle-1" style={{ top: -10, right: -4, fontSize: 15, color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.9)" }}>✦</span>
-        <span className="absolute luna-sparkle-2" style={{ bottom: 12, left: -10, fontSize: 12, color: "#a5f3fc", textShadow: "0 0 8px rgba(165,243,252,0.9)" }}>✧</span>
-        <span className="absolute luna-sparkle-3" style={{ top: "40%", right: -14, fontSize: 10, color: "#e879f9", textShadow: "0 0 8px rgba(232,121,249,0.9)" }}>⋆</span>
-      </div>
+      ))}
+      {/* Sparkles around center */}
+      <span className="absolute luna-sparkle-1" style={{ bottom: 140, left: "50%", marginLeft: -50, fontSize: 13, color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.9)" }}>✦</span>
+      <span className="absolute luna-sparkle-3" style={{ bottom: 120, left: "50%", marginLeft: 40, fontSize: 10, color: "#a5f3fc", textShadow: "0 0 8px rgba(165,243,252,0.9)" }}>✧</span>
+      <span className="absolute luna-sparkle-2" style={{ bottom: 130, left: "50%", marginLeft: -48, fontSize: 9, color: "#e879f9", textShadow: "0 0 8px rgba(232,121,249,0.9)" }}>⋆</span>
     </div>
   );
 }
@@ -154,12 +233,12 @@ const APPS: AppItem[] = [
   {
     title: "月夜タロット 放置ゲーム",
     description:
-      "ルナが主役のガチャ＆放置系ゲーム。タロットカードを集めながら星の物語を紡ぐ、夜の冒険に出よう。会員登録不要・完全無料でプレイできます。",
+      "22枚のタロットカードを集めていく、ルナ主役のガチャ放置ゲーム。SECRET RAREカードはまだ誰も見ていないかもしれない——登録不要・完全無料。",
     href: "/projects/tsukiyo-tarot",
     free: true,
     priceLabel: "無料",
     accent: "pink",
-    visual: <FoolCard />,
+    visual: <GameCardFan />,
   },
   {
     title: "積立シミュレーター",
