@@ -130,41 +130,44 @@ function GameCardFan() {
 
 function LunaQuestVisual() {
   return (
-    <div className="relative flex justify-center items-center py-3" style={{ height: 200 }}>
-      <div style={{ position: "relative", display: "inline-block" }}>
-        <div
-          className="absolute rounded-full"
-          style={{
-            inset: "-8px 20px",
-            background:
-              "radial-gradient(ellipse 80% 60% at 50% 70%, rgba(14,165,233,0.3) 0%, rgba(124,58,237,0.25) 50%, transparent 75%)",
-            filter: "blur(16px)",
-          }}
-        />
-        <Image
-          src="/luna-chibi.svg"
-          alt="ルナ（チビキャラ）"
-          width={220}
-          height={200}
-          style={{ position: "relative", zIndex: 1 }}
-          unoptimized
-        />
-      </div>
-      {/* コーナーのゲームUI風デコ */}
+    <div className="relative flex justify-center items-end overflow-hidden" style={{ height: 200 }}>
+      {/* 背景グロー */}
       <div
-        className="absolute top-2 right-3 font-mono text-xs"
+        className="absolute rounded-full pointer-events-none"
         style={{
-          color: "rgba(165,243,252,0.7)",
+          bottom: -20,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 200,
+          height: 120,
+          background:
+            "radial-gradient(ellipse at 50% 80%, rgba(124,58,237,0.4) 0%, rgba(14,165,233,0.2) 50%, transparent 75%)",
+          filter: "blur(18px)",
+        }}
+      />
+      {/* ルナ本体 */}
+      <Image
+        src="/luna-quest-chibi.png"
+        alt="ルナ（勇者）"
+        width={180}
+        height={180}
+        style={{ position: "relative", zIndex: 1, objectFit: "contain" }}
+      />
+      {/* ゲームUI風デコ */}
+      <div
+        className="absolute top-2 right-3 font-mono"
+        style={{
+          color: "rgba(165,243,252,0.75)",
           fontSize: 10,
-          letterSpacing: "0.08em",
-          textShadow: "0 0 8px rgba(165,243,252,0.8)",
+          letterSpacing: "0.1em",
+          textShadow: "0 0 8px rgba(165,243,252,0.9)",
         }}
       >
         ◆ QUEST MODE ◆
       </div>
       <div
         className="absolute bottom-2 left-3 font-mono"
-        style={{ color: "rgba(234,179,8,0.6)", fontSize: 9, letterSpacing: "0.05em" }}
+        style={{ color: "rgba(234,179,8,0.65)", fontSize: 9, letterSpacing: "0.05em" }}
       >
         Stage 20 / EX
       </div>
@@ -275,16 +278,6 @@ const APPS: AppItem[] = [
     accent: "pink",
   },
   {
-    title: "ルナクエスト オンライン",
-    description:
-      "ルナが主役のアイソメトリックRPG。剣と魔法でモンスターを倒し、Lv600の神域覚醒を目指せ。登録不要・完全無料で今すぐ遊べる本格アクションRPG。",
-    href: "/projects/luna-quest-online",
-    free: true,
-    priceLabel: "無料",
-    accent: "cyan",
-    visual: <LunaQuestVisual />,
-  },
-  {
     title: "月夜タロット 放置ゲーム",
     description:
       "22枚のタロットカードを集めていく、ルナ主役のガチャ放置ゲーム。SECRET RAREカードはまだ誰も見ていないかもしれない——登録不要・完全無料。",
@@ -293,6 +286,16 @@ const APPS: AppItem[] = [
     priceLabel: "無料",
     accent: "pink",
     visual: <GameCardFan />,
+  },
+  {
+    title: "ルナクエスト オンライン",
+    description:
+      "ルナが主役のアイソメトリックRPG。剣と魔法でモンスターを倒し、Lv600の神域覚醒を目指せ。登録不要・完全無料で今すぐ遊べる本格アクションRPG。",
+    href: "/projects/luna-quest-online",
+    free: true,
+    priceLabel: "無料",
+    accent: "cyan",
+    visual: <LunaQuestVisual />,
   },
   {
     title: "積立シミュレーター",

@@ -67,27 +67,33 @@ export default function LunaQuestOnlinePage() {
         {/* Hero */}
         <div className="flex flex-col md:flex-row items-center gap-10">
           {/* チビルナビジュアル */}
-          <div className="relative flex-shrink-0" style={{ width: 200, height: 182 }}>
+          <div className="relative flex-shrink-0" style={{ width: 200, height: 210 }}>
             <div
-              className="absolute rounded-full"
+              className="absolute rounded-full pointer-events-none"
               style={{
-                inset: "-12px 10px",
+                bottom: -10,
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: 180,
+                height: 100,
                 background:
-                  "radial-gradient(ellipse 80% 60% at 50% 70%, rgba(14,165,233,0.35) 0%, rgba(124,58,237,0.3) 50%, transparent 75%)",
+                  "radial-gradient(ellipse at 50% 80%, rgba(124,58,237,0.45) 0%, rgba(14,165,233,0.25) 50%, transparent 75%)",
                 filter: "blur(20px)",
               }}
             />
-            <div style={{ position: "relative", zIndex: 1 }}>
-              <Image
-                src="/luna-chibi.svg"
-                alt="ルナ（チビキャラ）"
-                width={220}
-                height={200}
-                priority
-                unoptimized
-                style={{ animation: "luna-float 6s ease-in-out infinite" }}
-              />
-            </div>
+            <Image
+              src="/luna-quest-chibi.png"
+              alt="ルナ（勇者）"
+              width={200}
+              height={200}
+              priority
+              style={{
+                position: "relative",
+                zIndex: 1,
+                objectFit: "contain",
+                animation: "luna-float 6s ease-in-out infinite",
+              }}
+            />
           </div>
 
           {/* テキスト */}
