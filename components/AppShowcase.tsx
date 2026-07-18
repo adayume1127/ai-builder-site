@@ -128,6 +128,50 @@ function GameCardFan() {
   );
 }
 
+function LunaQuestVisual() {
+  return (
+    <div className="relative flex justify-center items-center py-3" style={{ height: 200 }}>
+      <div style={{ position: "relative", display: "inline-block" }}>
+        <div
+          className="absolute rounded-full"
+          style={{
+            inset: "-8px 20px",
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% 70%, rgba(14,165,233,0.3) 0%, rgba(124,58,237,0.25) 50%, transparent 75%)",
+            filter: "blur(16px)",
+          }}
+        />
+        <Image
+          src="/luna-chibi.svg"
+          alt="ルナ（チビキャラ）"
+          width={220}
+          height={200}
+          style={{ position: "relative", zIndex: 1 }}
+          unoptimized
+        />
+      </div>
+      {/* コーナーのゲームUI風デコ */}
+      <div
+        className="absolute top-2 right-3 font-mono text-xs"
+        style={{
+          color: "rgba(165,243,252,0.7)",
+          fontSize: 10,
+          letterSpacing: "0.08em",
+          textShadow: "0 0 8px rgba(165,243,252,0.8)",
+        }}
+      >
+        ◆ QUEST MODE ◆
+      </div>
+      <div
+        className="absolute bottom-2 left-3 font-mono"
+        style={{ color: "rgba(234,179,8,0.6)", fontSize: 9, letterSpacing: "0.05em" }}
+      >
+        Stage 20 / EX
+      </div>
+    </div>
+  );
+}
+
 function TarotFan() {
   return (
     <div className="relative flex justify-center items-end h-28 mb-2 pointer-events-none select-none">
@@ -229,6 +273,16 @@ const APPS: AppItem[] = [
     free: false,
     priceLabel: "¥500都度課金",
     accent: "pink",
+  },
+  {
+    title: "ルナクエスト オンライン",
+    description:
+      "ルナが主役のアイソメトリックRPG。剣と魔法でモンスターを倒し、Lv600の神域覚醒を目指せ。登録不要・完全無料で今すぐ遊べる本格アクションRPG。",
+    href: "/projects/luna-quest-online",
+    free: true,
+    priceLabel: "無料",
+    accent: "cyan",
+    visual: <LunaQuestVisual />,
   },
   {
     title: "月夜タロット 放置ゲーム",

@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 200" width="220" height="200">
+  <defs>
+    <filter id="swordGlow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="eyeGlow">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="hairGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="hpGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="80%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#a7f3d0"/>
+    </linearGradient>
+    <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0f0a2e"/>
+    </linearGradient>
+    <radialGradient id="faceGrad" cx="50%" cy="40%">
+      <stop offset="0%" stop-color="#fde8d8"/>
+      <stop offset="100%" stop-color="#f5c9a5"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ═══ アイソメトリックタイル ═══ -->
+  <!-- 左タイル上面 -->
+  <polygon points="40,155 80,138 120,155 80,172" fill="#1a0940" stroke="rgba(165,243,252,0.45)" stroke-width="0.8"/>
+  <!-- 中央タイル上面 -->
+  <polygon points="80,138 120,121 160,138 120,155" fill="#1f0d4d" stroke="rgba(165,243,252,0.45)" stroke-width="0.8"/>
+  <!-- 右タイル上面 -->
+  <polygon points="120,155 160,138 200,155 160,172" fill="#1a0940" stroke="rgba(165,243,252,0.45)" stroke-width="0.8"/>
+  <!-- 左タイル前面 -->
+  <polygon points="40,155 80,172 80,182 40,165" fill="#0d0525" stroke="rgba(165,243,252,0.2)" stroke-width="0.5"/>
+  <!-- 中央タイル左前面 -->
+  <polygon points="80,172 120,155 120,165 80,182" fill="#0d0525" stroke="rgba(165,243,252,0.2)" stroke-width="0.5"/>
+  <!-- 中央タイル右前面 -->
+  <polygon points="120,155 160,172 160,182 120,165" fill="#090318" stroke="rgba(165,243,252,0.2)" stroke-width="0.5"/>
+  <!-- 右タイル前面 -->
+  <polygon points="160,172 200,155 200,165 160,182" fill="#090318" stroke="rgba(165,243,252,0.2)" stroke-width="0.5"/>
+
+  <!-- タイルの光るエッジ -->
+  <line x1="120" y1="121" x2="120" y2="155" stroke="rgba(165,243,252,0.25)" stroke-width="0.5"/>
+  <line x1="80" y1="138" x2="80" y2="172" stroke="rgba(165,243,252,0.2)" stroke-width="0.5"/>
+  <line x1="160" y1="138" x2="160" y2="172" stroke="rgba(165,243,252,0.2)" stroke-width="0.5"/>
+
+  <!-- キャラクターの影 -->
+  <ellipse cx="110" cy="127" rx="26" ry="8" fill="rgba(0,0,0,0.55)"/>
+
+  <!-- ═══ 剣（右腕で持つ）═══ -->
+  <!-- 剣の輝きエフェクト -->
+  <rect x="132" y="58" width="7" height="52" rx="3" transform="rotate(12,135.5,84)" fill="rgba(165,243,252,0.12)" stroke="rgba(165,243,252,0.5)" stroke-width="5" filter="url(#swordGlow)"/>
+  <!-- 剣刃 -->
+  <rect x="133" y="58" width="5" height="48" rx="2.5" transform="rotate(12,135.5,82)" fill="none" stroke="rgba(165,243,252,0.95)" stroke-width="1.8"/>
+  <!-- 剣先 -->
+  <polygon points="135.5,56 131,65 140,65" transform="rotate(12,135.5,60)" fill="rgba(165,243,252,0.7)" stroke="rgba(165,243,252,0.9)" stroke-width="0.8"/>
+  <!-- ガード（鍔） -->
+  <rect x="127" y="100" width="18" height="6" rx="3" transform="rotate(12,136,103)" fill="#ffd700" stroke="rgba(234,179,8,0.9)" stroke-width="0.8"/>
+  <!-- グリップ -->
+  <rect x="133" y="104" width="5" height="18" rx="2" transform="rotate(12,135.5,113)" fill="#3b0764"/>
+  <!-- ポンメル -->
+  <circle cx="132" cy="123" r="4" transform="rotate(12,132,122)" fill="#7c3aed" stroke="rgba(234,179,8,0.7)" stroke-width="0.8"/>
+
+  <!-- ═══ マント ═══ -->
+  <path d="M 96 98 Q 82 112 84 136 Q 88 133 92 129 L 99 110 Z" fill="#5b21b6" opacity="0.9"/>
+  <path d="M 126 98 Q 140 112 138 136 Q 134 133 130 129 L 123 110 Z" fill="#5b21b6" opacity="0.9"/>
+  <!-- マント内側 -->
+  <path d="M 96 98 Q 82 112 84 136 Q 87 134 90 130 L 97 110 Z" fill="#4c1d95" opacity="0.5"/>
+
+  <!-- ═══ 胴体（鎧） ═══ -->
+  <!-- 胴体メイン -->
+  <rect x="97" y="98" width="28" height="30" rx="5" fill="url(#bodyGrad)" stroke="rgba(234,179,8,0.6)" stroke-width="1"/>
+  <!-- 鎧上部ゴールドライン -->
+  <rect x="97" y="98" width="28" height="6" rx="3" fill="#d97706" opacity="0.75"/>
+  <!-- 胴体中央装飾 -->
+  <line x1="111" y1="104" x2="111" y2="126" stroke="rgba(234,179,8,0.4)" stroke-width="1"/>
+  <!-- ベルト -->
+  <rect x="96" y="122" width="30" height="5" rx="2" fill="#92400e" stroke="rgba(234,179,8,0.6)" stroke-width="0.8"/>
+  <!-- ベルトバックル -->
+  <rect x="108" y="121" width="6" height="7" rx="1.5" fill="#ffd700" stroke="rgba(234,179,8,0.9)" stroke-width="0.5"/>
+
+  <!-- ═══ 脚 ═══ -->
+  <rect x="100" y="125" width="11" height="15" rx="3" fill="#312e81"/>
+  <rect x="111" y="125" width="11" height="15" rx="3" fill="#312e81"/>
+  <!-- ブーツ -->
+  <rect x="99" y="137" width="12" height="8" rx="3" fill="#1e1260"/>
+  <rect x="111" y="137" width="12" height="8" rx="3" fill="#1e1260"/>
+  <!-- ブーツゴールドトリム -->
+  <rect x="99" y="137" width="12" height="2.5" rx="1" fill="rgba(234,179,8,0.5)"/>
+  <rect x="111" y="137" width="12" height="2.5" rx="1" fill="rgba(234,179,8,0.5)"/>
+
+  <!-- ═══ 腕 ═══ -->
+  <!-- 右腕（剣を持つ） -->
+  <rect x="124" y="100" width="10" height="22" rx="4" transform="rotate(-15,129,111)" fill="#312e81" stroke="rgba(234,179,8,0.3)" stroke-width="0.5"/>
+  <!-- 左腕 -->
+  <rect x="88" y="100" width="10" height="22" rx="4" transform="rotate(10,93,111)" fill="#312e81" stroke="rgba(234,179,8,0.3)" stroke-width="0.5"/>
+  <!-- 左手グローブ -->
+  <circle cx="88" cy="121" r="5" transform="rotate(10,93,111)" fill="#1e1b4b"/>
+
+  <!-- ═══ 頭部 ═══ -->
+  <!-- ツインテール（後ろ） -->
+  <!-- 左ツインテール -->
+  <path d="M 96 75 Q 80 90 78 112 Q 80 120 85 117 Q 82 106 88 88 Q 91 80 95 76 Z" fill="#6d28d9"/>
+  <path d="M 96 75 Q 82 88 80 108 Q 82 115 86 113 Q 83 104 89 86 Q 92 78 95.5 75.5 Z" fill="#7c3aed"/>
+  <!-- 右ツインテール -->
+  <path d="M 126 75 Q 142 90 144 112 Q 142 120 137 117 Q 140 106 134 88 Q 131 80 127 76 Z" fill="#6d28d9"/>
+  <path d="M 126 75 Q 140 88 142 108 Q 140 115 138 113 Q 141 104 135 86 Q 132 78 126.5 75.5 Z" fill="#7c3aed"/>
+
+  <!-- 頭（顔） -->
+  <circle cx="111" cy="70" r="26" fill="url(#faceGrad)" stroke="#f0c9a0" stroke-width="0.5"/>
+
+  <!-- 髪（前） -->
+  <path d="M 88 64 Q 92 44 111 42 Q 130 44 134 64 L 130 67 Q 124 50 111 50 Q 98 50 92 67 Z" fill="#7c3aed"/>
+  <!-- 前髪 左 -->
+  <path d="M 88 64 Q 84 70 85 78 Q 88 76 91 70 Z" fill="#7c3aed"/>
+  <!-- 前髪 中央 -->
+  <path d="M 103 42 Q 101 52 106 58 Q 109 48 111 46 Z" fill="#6d28d9"/>
+  <path d="M 119 42 Q 121 52 116 58 Q 113 48 111 46 Z" fill="#6d28d9"/>
+  <!-- 前髪 右 -->
+  <path d="M 134 64 Q 138 70 137 78 Q 134 76 131 70 Z" fill="#7c3aed"/>
+
+  <!-- ═══ 顔 ═══ -->
+  <!-- 左目 -->
+  <ellipse cx="102" cy="71" rx="6" ry="7" fill="white"/>
+  <ellipse cx="102" cy="72" rx="4.5" ry="5.5" fill="#0ea5e9"/>
+  <circle cx="102" cy="72.5" r="3" fill="#075985"/>
+  <circle cx="103.5" cy="70.5" r="1.2" fill="white"/>
+  <!-- 左目グロー -->
+  <ellipse cx="102" cy="72" rx="4.5" ry="5.5" fill="none" stroke="rgba(14,165,233,0.5)" stroke-width="2" filter="url(#eyeGlow)"/>
+
+  <!-- 右目 -->
+  <ellipse cx="120" cy="71" rx="6" ry="7" fill="white"/>
+  <ellipse cx="120" cy="72" rx="4.5" ry="5.5" fill="#0ea5e9"/>
+  <circle cx="120" cy="72.5" r="3" fill="#075985"/>
+  <circle cx="121.5" cy="70.5" r="1.2" fill="white"/>
+  <!-- 右目グロー -->
+  <ellipse cx="120" cy="72" rx="4.5" ry="5.5" fill="none" stroke="rgba(14,165,233,0.5)" stroke-width="2" filter="url(#eyeGlow)"/>
+
+  <!-- まつ毛 -->
+  <path d="M 96.5 66.5 Q 99 64 103 65.5" stroke="#4c1d95" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <path d="M 118 65.5 Q 121 64 123.5 66.5" stroke="#4c1d95" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+
+  <!-- 眉 -->
+  <path d="M 97 63.5 Q 101 61.5 105 63" stroke="#5b21b6" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M 117 63 Q 121 61.5 125 63.5" stroke="#5b21b6" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- チーク -->
+  <ellipse cx="96" cy="76" rx="5" ry="3" fill="rgba(252,165,165,0.45)"/>
+  <ellipse cx="126" cy="76" rx="5" ry="3" fill="rgba(252,165,165,0.45)"/>
+
+  <!-- 口（笑顔） -->
+  <path d="M 107 82 Q 111 86 115 82" stroke="#c084fc" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+  <!-- 鼻 -->
+  <path d="M 110 76.5 Q 111 79 112 76.5" stroke="#f0c9a0" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- ═══ 髪飾り（三日月） ═══ -->
+  <path d="M 121 50 Q 128 46 126 41 Q 134 43 132 52 Q 130 47 122 50 Z" fill="#ffd700" stroke="rgba(234,179,8,0.6)" stroke-width="0.5"/>
+  <circle cx="131" cy="43" r="1.5" fill="rgba(234,179,8,0.4)"/>
+
+  <!-- ═══ HPバー ═══ -->
+  <rect x="78" y="24" width="68" height="8" rx="4" fill="rgba(0,0,0,0.7)" stroke="rgba(165,243,252,0.3)" stroke-width="0.5"/>
+  <rect x="79.5" y="25.5" width="65" height="5" rx="2.5" fill="url(#hpGrad)"/>
+  <text x="113" y="32" text-anchor="middle" font-size="5.5" fill="white" font-family="monospace" font-weight="bold" letter-spacing="0.5">HP MAX</text>
+
+  <!-- ═══ レベルバッジ ═══ -->
+  <rect x="79" y="11" width="34" height="12" rx="5" fill="#1e0a30" stroke="rgba(234,179,8,0.7)" stroke-width="0.9"/>
+  <text x="96" y="20" text-anchor="middle" font-size="7.5" fill="#ffd700" font-family="monospace" font-weight="bold" letter-spacing="0.3">Lv.600</text>
+
+  <!-- ═══ スパークル ═══ -->
+  <text x="18" y="88" font-size="14" fill="#ffd700" style="filter:drop-shadow(0 0 5px rgba(255,215,0,0.9))">✦</text>
+  <text x="188" y="65" font-size="11" fill="#a5f3fc" style="filter:drop-shadow(0 0 5px rgba(165,243,252,0.9))">✧</text>
+  <text x="28" y="128" font-size="9" fill="#e879f9" style="filter:drop-shadow(0 0 4px rgba(232,121,249,0.9))">⋆</text>
+  <text x="180" y="112" font-size="11" fill="#ffd700" style="filter:drop-shadow(0 0 5px rgba(255,215,0,0.9))">✦</text>
+  <text x="50" y="55" font-size="8" fill="#a5f3fc" style="filter:drop-shadow(0 0 4px rgba(165,243,252,0.8))">⋆</text>
+  <text x="162" y="46" font-size="7" fill="#e879f9" style="filter:drop-shadow(0 0 4px rgba(232,121,249,0.8))">✦</text>
+
+  <!-- 剣の輝き粒子 -->
+  <circle cx="148" cy="62" r="1.5" fill="rgba(165,243,252,0.8)"/>
+  <circle cx="153" cy="72" r="1" fill="rgba(165,243,252,0.6)"/>
+  <circle cx="145" cy="78" r="1.2" fill="rgba(165,243,252,0.7)"/>
+</svg>
