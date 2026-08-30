@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LunaCoach } from "./LunaCoach";
+import { PortfolioPieChart } from "./PortfolioPieChart";
 import {
   formatMan,
   levelForProgress,
@@ -14,20 +15,29 @@ import {
   ACHIEVEMENTS,
   type Goal,
 } from "@/lib/investmentTracker";
+import { emptyBreakdown, latestSnapshot, snapshotTotals, type PortfolioSnapshot } from "@/lib/portfolio";
 
 export function HomeTab({
   goals,
+  snapshots,
   onGoToQuest,
   onGoToAchievements,
+  onGoToAssets,
 }: {
   goals: Goal[];
+  snapshots: PortfolioSnapshot[];
   onGoToQuest: () => void;
   onGoToAchievements: () => void;
+  onGoToAssets: () => void;
 }) {
   const [avatarOk, setAvatarOk] = useState(true);
   const rank = playerRank(goals);
   const totalAssets = totalAssetsMan(goals);
   const unlockedCount = unlockedAchievements(goals).length;
+
+  const latest = latestSnapshot(snapshots);
+  const portfolioBreakdown = latest?.categories ?? emptyBreakdown();
+  const portfolioTotal = latest ? snapshotTotals(latest).totalMan : 0;
 
   const coach = (() => {
     if (goals.length === 0) {
@@ -94,6 +104,26 @@ export function HomeTab({
       </div>
 
       <LunaCoach variant={coach.variant} message={coach.message} />
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-mono text-sm text-muted-foreground">資産ポートフォリオ</h2>
+          <button
+            type="button"
+            onClick={onGoToAssets}
+            className="neon-text-pink font-mono text-xs underline underline-offset-2"
+          >
+            {latest ? "記録・詳細を見る →" : "内訳を記録する →"}
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onGoToAssets}
+          className="w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+        >
+          <PortfolioPieChart breakdown={portfolioBreakdown} totalMan={portfolioTotal} />
+        </button>
+      </div>
 
       {goals.length > 0 && (
         <div className="space-y-2">

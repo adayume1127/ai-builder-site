@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AchievementsTab } from "@/components/investment-tracker/AchievementsTab";
+import { AssetsTab } from "@/components/investment-tracker/AssetsTab";
 import { BottomNav, type TabKey } from "@/components/investment-tracker/BottomNav";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
@@ -16,21 +17,36 @@ import {
   type Goal,
   type NewGoalInput,
 } from "@/lib/investmentTracker";
+import {
+  loadSnapshots,
+  saveSnapshots,
+  upsertSnapshot,
+  type CategoryBreakdown,
+  type PortfolioSnapshot,
+} from "@/lib/portfolio";
 
 export default function InvestmentTrackerPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [snapshots, setSnapshots] = useState<PortfolioSnapshot[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TabKey>("home");
 
   useEffect(() => {
     setGoals(loadGoals());
+    setSnapshots(loadSnapshots());
     setLoaded(true);
   }, []);
 
   function persist(next: Goal[]) {
     setGoals(next);
     saveGoals(next);
+  }
+
+  function handleSavePortfolio(breakdown: CategoryBreakdown) {
+    const next = upsertSnapshot(snapshots, breakdown);
+    setSnapshots(next);
+    saveSnapshots(next);
   }
 
   function handleCreate(input: NewGoalInput) {
@@ -80,11 +96,13 @@ export default function InvestmentTrackerPage() {
           {!loaded ? null : activeTab === "home" ? (
             <HomeTab
               goals={goals}
+              snapshots={snapshots}
               onGoToQuest={() => {
                 setActiveTab("quest");
                 if (goals.length === 0) setFormMode({ type: "create" });
               }}
               onGoToAchievements={() => setActiveTab("achievements")}
+              onGoToAssets={() => setActiveTab("assets")}
             />
           ) : activeTab === "quest" ? (
             <QuestTab
@@ -98,6 +116,8 @@ export default function InvestmentTrackerPage() {
               onUpdate={handleUpdate}
               onDelete={handleDelete}
             />
+          ) : activeTab === "assets" ? (
+            <AssetsTab snapshots={snapshots} onSave={handleSavePortfolio} />
           ) : (
             <AchievementsTab goals={goals} />
           )}
