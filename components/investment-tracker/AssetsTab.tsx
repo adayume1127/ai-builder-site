@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AssetTrendChart } from "./AssetTrendChart";
 import { PortfolioForm } from "./PortfolioForm";
 import { PortfolioPieChart } from "./PortfolioPieChart";
@@ -14,14 +15,19 @@ import {
 
 export function AssetsTab({
   snapshots,
+  targetAmountYen,
   onSave,
+  onSaveTarget,
 }: {
   snapshots: PortfolioSnapshot[];
+  targetAmountYen: number;
   onSave: (breakdown: CategoryBreakdown) => void;
+  onSaveTarget: (value: number) => void;
 }) {
   const latest = latestSnapshot(snapshots);
   const latestBreakdown = latest?.categories ?? emptyBreakdown();
   const latestTotal = latest ? snapshotTotals(latest).totalYen : 0;
+  const [targetInput, setTargetInput] = useState(targetAmountYen ? String(targetAmountYen) : "");
 
   return (
     <div className="space-y-6">
@@ -36,9 +42,33 @@ export function AssetsTab({
         <PortfolioPieChart breakdown={latestBreakdown} totalYen={latestTotal} />
       </div>
 
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <label className="text-xs text-muted-foreground font-mono">シミュレーションの目標額(円)</label>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            inputMode="decimal"
+            value={targetInput}
+            onChange={(e) => setTargetInput(e.target.value)}
+            placeholder="例: 10000000"
+            className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+          />
+          <button
+            type="button"
+            onClick={() => onSaveTarget(Number(targetInput) || 0)}
+            className="shrink-0 rounded-lg gold-border gold-text px-3 py-1.5 font-mono text-xs"
+          >
+            設定
+          </button>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          設定すると、下の資産推移グラフに目標額の線が表示されます。
+        </p>
+      </div>
+
       <div className="space-y-2">
         <h3 className="font-mono text-sm text-muted-foreground">資産推移</h3>
-        <AssetTrendChart snapshots={snapshots} />
+        <AssetTrendChart snapshots={snapshots} targetAmountYen={targetAmountYen} />
       </div>
 
       <div className="space-y-2">

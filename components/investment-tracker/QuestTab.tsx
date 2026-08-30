@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { GoalCard } from "./GoalCard";
 import { GoalForm } from "./GoalForm";
 import type { Goal, NewGoalInput } from "@/lib/investmentTracker";
+import { formatYen } from "@/lib/portfolio";
 
 export type FormMode = { type: "closed" } | { type: "create" } | { type: "edit"; goalId: string };
 
 export function QuestTab({
   goals,
+  totalAssetsYen,
   formMode,
   onOpenCreate,
   onCloseForm,
@@ -19,6 +21,7 @@ export function QuestTab({
   onDelete,
 }: {
   goals: Goal[];
+  totalAssetsYen: number;
   formMode: FormMode;
   onOpenCreate: () => void;
   onCloseForm: () => void;
@@ -33,6 +36,9 @@ export function QuestTab({
       <div className="text-center space-y-1">
         <h2 className="neon-text text-xl font-bold font-mono">クエスト一覧</h2>
         <p className="text-sm text-muted-foreground">目標を育てて、積立クエストをクリアしよう。</p>
+        <p className="font-mono text-xs text-muted-foreground">
+          現在の総資産(資産タブより) <span className="gold-text font-bold">{formatYen(totalAssetsYen)}</span>
+        </p>
       </div>
 
       {formMode.type === "create" && <GoalForm onSave={onCreate} onCancel={onCloseForm} />}

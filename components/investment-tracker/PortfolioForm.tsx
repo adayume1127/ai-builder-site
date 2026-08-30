@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ASSET_CATEGORIES, formatYen, type AssetCategoryKey, type CategoryBreakdown } from "@/lib/portfolio";
 
+type FieldValues = { current: string; profit: string; monthly: string };
+
 export function PortfolioForm({
   initial,
   onSave,
@@ -11,12 +13,13 @@ export function PortfolioForm({
   initial: CategoryBreakdown;
   onSave: (breakdown: CategoryBreakdown) => void;
 }) {
-  const [values, setValues] = useState<Record<AssetCategoryKey, { current: string; profit: string }>>(() => {
-    const init = {} as Record<AssetCategoryKey, { current: string; profit: string }>;
+  const [values, setValues] = useState<Record<AssetCategoryKey, FieldValues>>(() => {
+    const init = {} as Record<AssetCategoryKey, FieldValues>;
     for (const cat of ASSET_CATEGORIES) {
       init[cat.key] = {
         current: initial[cat.key].currentValueYen ? String(initial[cat.key].currentValueYen) : "",
         profit: initial[cat.key].profitYen ? String(initial[cat.key].profitYen) : "",
+        monthly: initial[cat.key].monthlyContributionYen ? String(initial[cat.key].monthlyContributionYen) : "",
       };
     }
     return init;
@@ -29,6 +32,7 @@ export function PortfolioForm({
       b[cat.key] = {
         currentValueYen: Number(values[cat.key].current) || 0,
         profitYen: Number(values[cat.key].profit) || 0,
+        monthlyContributionYen: Number(values[cat.key].monthly) || 0,
       };
     }
     return b;
@@ -36,8 +40,9 @@ export function PortfolioForm({
 
   const totalYen = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].currentValueYen, 0);
   const profitYen = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].profitYen, 0);
+  const monthlyTotalYen = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].monthlyContributionYen, 0);
 
-  function setField(key: AssetCategoryKey, field: "current" | "profit", v: string) {
+  function setField(key: AssetCategoryKey, field: keyof FieldValues, v: string) {
     setValues((prev) => ({ ...prev, [key]: { ...prev[key], [field]: v } }));
     setSavedAt(null);
   }
@@ -78,6 +83,17 @@ export function PortfolioForm({
               />
             </div>
           </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground font-mono">毎月の積立額(円)</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={values[cat.key].monthly}
+              onChange={(e) => setField(cat.key, "monthly", e.target.value)}
+              placeholder="例: 100000"
+              className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+            />
+          </div>
         </div>
       ))}
 
@@ -92,6 +108,10 @@ export function PortfolioForm({
             {profitYen >= 0 ? "+" : ""}
             {formatYen(profitYen)}
           </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground text-xs">毎月の積立合計</span>
+          <span className="neon-text-pink font-bold">{formatYen(monthlyTotalYen)}</span>
         </div>
       </div>
 

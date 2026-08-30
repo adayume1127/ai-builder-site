@@ -18,7 +18,9 @@ import {
 import {
   formatYen,
   latestSnapshot,
+  loadPortfolioSettings,
   loadSnapshots,
+  savePortfolioSettings,
   saveSnapshots,
   snapshotTotals,
   upsertSnapshot,
@@ -29,6 +31,7 @@ import {
 export default function InvestmentTrackerPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [snapshots, setSnapshots] = useState<PortfolioSnapshot[]>([]);
+  const [targetAmountYen, setTargetAmountYen] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TabKey>("home");
@@ -36,6 +39,7 @@ export default function InvestmentTrackerPage() {
   useEffect(() => {
     setGoals(loadGoals());
     setSnapshots(loadSnapshots());
+    setTargetAmountYen(loadPortfolioSettings().targetAmountYen);
     setLoaded(true);
   }, []);
 
@@ -48,6 +52,11 @@ export default function InvestmentTrackerPage() {
     const next = upsertSnapshot(snapshots, breakdown);
     setSnapshots(next);
     saveSnapshots(next);
+  }
+
+  function handleSaveTarget(value: number) {
+    setTargetAmountYen(value);
+    savePortfolioSettings({ targetAmountYen: value });
   }
 
   function handleCreate(input: NewGoalInput) {
@@ -109,6 +118,7 @@ export default function InvestmentTrackerPage() {
           ) : activeTab === "quest" ? (
             <QuestTab
               goals={goals}
+              totalAssetsYen={totalAssets}
               formMode={formMode}
               onOpenCreate={() => setFormMode({ type: "create" })}
               onCloseForm={() => setFormMode({ type: "closed" })}
@@ -119,7 +129,12 @@ export default function InvestmentTrackerPage() {
               onDelete={handleDelete}
             />
           ) : activeTab === "assets" ? (
-            <AssetsTab snapshots={snapshots} onSave={handleSavePortfolio} />
+            <AssetsTab
+              snapshots={snapshots}
+              targetAmountYen={targetAmountYen}
+              onSave={handleSavePortfolio}
+              onSaveTarget={handleSaveTarget}
+            />
           ) : (
             <AchievementsTab goals={goals} />
           )}
