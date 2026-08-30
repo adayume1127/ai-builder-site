@@ -245,37 +245,13 @@ const APPS: AppItem[] = [
     accent: "pink",
   },
   {
-    title: "請求書・見積書AI作成",
-    description: "箇条書きを入力するだけでAIが請求書・見積書PDFを作成。登録不要、その場で¥500の都度課金です。",
-    href: "/projects/invoice-ai-tool",
-    free: false,
-    priceLabel: "¥500都度課金",
-    accent: "cyan",
-  },
-  {
     title: "LINEトーク風ストーリーAI",
     description:
       "文章や箇条書きを入れるだけで、AIがLINEのトーク画面風アニメーションに変換するツール。読み上げ・キャラ編集・動画保存にも対応しています。",
     href: "/projects/line-story-ai",
     free: false,
     priceLabel: "サブスク",
-    accent: "pink",
-  },
-  {
-    title: "写真フォルダAI仕分け",
-    description: "写真をまとめてアップロードするだけで、AIがブレ・重複・スクショを自動診断。登録不要、その場で¥480の都度課金です。",
-    href: "/projects/photo-sort-ai",
-    free: false,
-    priceLabel: "¥480都度課金",
     accent: "cyan",
-  },
-  {
-    title: "サブスク見直しAI診断",
-    description: "カードの利用明細を貼るだけで、AIが契約中のサブスクと重複・休眠サブスクを発見。登録不要、その場で¥500の都度課金です。",
-    href: "/projects/sub-reset-ai",
-    free: false,
-    priceLabel: "¥500都度課金",
-    accent: "pink",
   },
   {
     title: "月夜タロット 放置ゲーム",
@@ -298,10 +274,10 @@ const APPS: AppItem[] = [
     visual: <LunaQuestVisual />,
   },
   {
-    title: "積立シミュレーター",
+    title: "積立クエスト",
     description:
-      "目標額・積立額・コーストFIREなど、3つの方法で複利の積立計算ができるツール。会員登録不要、何度でも無料で使えます。",
-    href: "/tools/investment-calculator",
+      "複数の目標を保存してゲーム感覚で育てる積立トラッカー。必要な毎月積立額・将来額に加え、実際の投資額と評価額から実績年利も計算できます。会員登録不要、完全無料。",
+    href: "/tools/investment-tracker",
     free: true,
     priceLabel: "無料",
     accent: "cyan",

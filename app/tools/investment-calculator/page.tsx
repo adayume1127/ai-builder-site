@@ -235,6 +235,15 @@ export default function InvestmentCalculatorPage() {
           </Link>
         </p>
 
+        <Link
+          href="/tools/investment-tracker"
+          className="block rounded-xl gold-border bg-white/5 px-4 py-3 text-center text-sm font-mono transition-colors hover:bg-white/10"
+        >
+          🆕 複数の目標を保存してゲーム感覚で育てられる進化版
+          <span className="gold-text font-bold">「積立クエスト」</span>
+          も公開中 →
+        </Link>
+
         <div className="text-center space-y-3">
           <h1 className="neon-text text-3xl font-bold tracking-tight font-mono">
             積立シミュレーター
