@@ -197,3 +197,73 @@ export function paceStatus(goal: Goal): PaceStatus {
 }
 
 export const DEFAULT_EMOJIS = ["🏖️", "🏠", "🎓", "🚗", "👴", "💍", "🌍", "💰"];
+
+// 全目標の合計資産(実績評価額があればそちら優先、なければ投資資金+貯金)
+export function totalAssetsMan(goals: Goal[]): number {
+  return goals.reduce((sum, g) => sum + (g.actual.currentValueMan ?? g.investedMan + g.savingsMan), 0);
+}
+
+export type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  check: (goals: Goal[]) => boolean;
+};
+
+export const ACHIEVEMENTS: Achievement[] = [
+  {
+    id: "first-goal",
+    title: "はじめの一歩",
+    description: "目標を1つ作成する",
+    check: (goals) => goals.length >= 1,
+  },
+  {
+    id: "record-actual",
+    title: "運用の記録者",
+    description: "実績(投資元本・評価額)を1つ記録する",
+    check: (goals) => goals.some((g) => actualAnnualRate(g.actual) !== null),
+  },
+  {
+    id: "positive-return",
+    title: "プラス運用",
+    description: "実績年利がプラスの目標を持つ",
+    check: (goals) => goals.some((g) => (actualAnnualRate(g.actual) ?? -1) > 0),
+  },
+  {
+    id: "multi-goal",
+    title: "欲張り投資家",
+    description: "3つ以上の目標を同時に管理する",
+    check: (goals) => goals.length >= 3,
+  },
+  {
+    id: "all-on-track",
+    title: "ペースの達人",
+    description: "すべての目標が順調ペースになる",
+    check: (goals) => goals.length > 0 && goals.every((g) => paceStatus(g) !== "behind"),
+  },
+  {
+    id: "goal-achieved",
+    title: "目標達成",
+    description: "いずれかの目標を100%達成する",
+    check: (goals) => goals.some((g) => progressRatio(g) >= 1),
+  },
+];
+
+export function unlockedAchievements(goals: Goal[]): Achievement[] {
+  return ACHIEVEMENTS.filter((a) => a.check(goals));
+}
+
+const PLAYER_TITLES = [
+  "見習いプランナー",
+  "駆け出し投資家",
+  "積立の実践者",
+  "資産形成の探求者",
+  "コツコツ戦略家",
+  "積立クエストの賢者",
+  "伝説の資産家",
+];
+
+export function playerRank(goals: Goal[]): { level: number; title: string } {
+  const unlockedCount = unlockedAchievements(goals).length;
+  return { level: unlockedCount + 1, title: PLAYER_TITLES[unlockedCount] };
+}
