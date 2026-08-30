@@ -37,7 +37,7 @@ export function HomeTab({
 
   const latest = latestSnapshot(snapshots);
   const portfolioBreakdown = latest?.categories ?? emptyBreakdown();
-  const portfolioTotal = latest ? snapshotTotals(latest).totalMan : 0;
+  const portfolioTotal = latest ? snapshotTotals(latest).totalYen : 0;
 
   const coach = (() => {
     if (goals.length === 0) {
@@ -121,7 +121,7 @@ export function HomeTab({
           onClick={onGoToAssets}
           className="w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
         >
-          <PortfolioPieChart breakdown={portfolioBreakdown} totalMan={portfolioTotal} />
+          <PortfolioPieChart breakdown={portfolioBreakdown} totalYen={portfolioTotal} />
         </button>
       </div>
 

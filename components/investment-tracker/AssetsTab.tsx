@@ -3,9 +3,9 @@
 import { AssetTrendChart } from "./AssetTrendChart";
 import { PortfolioForm } from "./PortfolioForm";
 import { PortfolioPieChart } from "./PortfolioPieChart";
-import { formatMan } from "@/lib/investmentTracker";
 import {
   emptyBreakdown,
+  formatYen,
   latestSnapshot,
   snapshotTotals,
   type CategoryBreakdown,
@@ -21,7 +21,7 @@ export function AssetsTab({
 }) {
   const latest = latestSnapshot(snapshots);
   const latestBreakdown = latest?.categories ?? emptyBreakdown();
-  const latestTotal = latest ? snapshotTotals(latest).totalMan : 0;
+  const latestTotal = latest ? snapshotTotals(latest).totalYen : 0;
 
   return (
     <div className="space-y-6">
@@ -33,7 +33,7 @@ export function AssetsTab({
       </div>
 
       <div className="gold-border rounded-2xl bg-white/5 p-4">
-        <PortfolioPieChart breakdown={latestBreakdown} totalMan={latestTotal} />
+        <PortfolioPieChart breakdown={latestBreakdown} totalYen={latestTotal} />
       </div>
 
       <div className="space-y-2">
@@ -60,14 +60,14 @@ export function AssetsTab({
               </thead>
               <tbody>
                 {[...snapshots].reverse().map((s) => {
-                  const { totalMan, profitMan } = snapshotTotals(s);
+                  const { totalYen, profitYen } = snapshotTotals(s);
                   return (
                     <tr key={s.id} className="border-b border-white/5 last:border-0">
                       <td className="px-3 py-2">{s.date}</td>
-                      <td className="px-3 py-2 text-right">{formatMan(totalMan)}</td>
-                      <td className={`px-3 py-2 text-right ${profitMan >= 0 ? "neon-text" : "text-destructive"}`}>
-                        {profitMan >= 0 ? "+" : ""}
-                        {formatMan(profitMan)}
+                      <td className="px-3 py-2 text-right">{formatYen(totalYen)}</td>
+                      <td className={`px-3 py-2 text-right ${profitYen >= 0 ? "neon-text" : "text-destructive"}`}>
+                        {profitYen >= 0 ? "+" : ""}
+                        {formatYen(profitYen)}
                       </td>
                     </tr>
                   );

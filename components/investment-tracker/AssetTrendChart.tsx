@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatMan } from "@/lib/investmentTracker";
-import { snapshotTotals, type PortfolioSnapshot } from "@/lib/portfolio";
+import { formatYen, snapshotTotals, type PortfolioSnapshot } from "@/lib/portfolio";
 
 const WIDTH = 560;
 const HEIGHT = 180;
@@ -30,8 +29,8 @@ export function AssetTrendChart({ snapshots }: { snapshots: PortfolioSnapshot[] 
     );
   }
 
-  const points = snapshots.map((s) => ({ date: s.date, totalMan: snapshotTotals(s).totalMan }));
-  const values = points.map((p) => p.totalMan);
+  const points = snapshots.map((s) => ({ date: s.date, totalYen: snapshotTotals(s).totalYen }));
+  const values = points.map((p) => p.totalYen);
   const maxV = Math.max(...values, 0);
   const minV = Math.min(...values, 0);
   const range = maxV - minV || 1;
@@ -39,7 +38,7 @@ export function AssetTrendChart({ snapshots }: { snapshots: PortfolioSnapshot[] 
   const xAt = (i: number) => PAD_LEFT + (i / (points.length - 1)) * CHART_W;
   const yAt = (v: number) => PAD_TOP + CHART_H - ((v - minV) / range) * CHART_H;
 
-  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${xAt(i)} ${yAt(p.totalMan)}`).join(" ");
+  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${xAt(i)} ${yAt(p.totalYen)}`).join(" ");
   const areaPath = `${linePath} L ${xAt(points.length - 1)} ${PAD_TOP + CHART_H} L ${xAt(0)} ${PAD_TOP + CHART_H} Z`;
 
   const hovered = hoverIndex !== null ? points[hoverIndex] : null;
@@ -93,7 +92,7 @@ export function AssetTrendChart({ snapshots }: { snapshots: PortfolioSnapshot[] 
               stroke="rgba(255,255,255,0.25)"
               strokeWidth={1}
             />
-            <circle cx={xAt(hoverIndex)} cy={yAt(hovered.totalMan)} r={4} fill={NEON_CYAN} />
+            <circle cx={xAt(hoverIndex)} cy={yAt(hovered.totalYen)} r={4} fill={NEON_CYAN} />
           </>
         )}
 
@@ -109,7 +108,7 @@ export function AssetTrendChart({ snapshots }: { snapshots: PortfolioSnapshot[] 
       <div className="flex h-5 items-center justify-center font-mono text-xs">
         {hovered ? (
           <span className="text-muted-foreground">
-            {formatDateLabel(hovered.date)}: <span className="neon-text font-bold">{formatMan(hovered.totalMan)}</span>
+            {formatDateLabel(hovered.date)}: <span className="neon-text font-bold">{formatYen(hovered.totalYen)}</span>
           </span>
         ) : (
           <span className="text-muted-foreground/60">グラフをなぞると各時点の資産額を確認できます</span>

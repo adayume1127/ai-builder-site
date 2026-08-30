@@ -1,7 +1,6 @@
 "use client";
 
-import { formatMan } from "@/lib/investmentTracker";
-import { ASSET_CATEGORIES, type CategoryBreakdown } from "@/lib/portfolio";
+import { ASSET_CATEGORIES, formatYen, type CategoryBreakdown } from "@/lib/portfolio";
 
 const SIZE = 200;
 const CENTER = SIZE / 2;
@@ -35,17 +34,17 @@ function donutSegmentPath(startAngle: number, endAngle: number) {
 
 export function PortfolioPieChart({
   breakdown,
-  totalMan,
+  totalYen,
 }: {
   breakdown: CategoryBreakdown;
-  totalMan: number;
+  totalYen: number;
 }) {
-  const hasData = totalMan > 0;
+  const hasData = totalYen > 0;
   let cursor = -Math.PI / 2; // 12時方向から開始
 
   const segments = ASSET_CATEGORIES.map((cat) => {
-    const value = Math.max(0, breakdown[cat.key].currentValueMan);
-    const ratio = hasData ? value / totalMan : 0;
+    const value = Math.max(0, breakdown[cat.key].currentValueYen);
+    const ratio = hasData ? value / totalYen : 0;
     const startAngle = cursor;
     const endAngle = cursor + ratio * Math.PI * 2;
     cursor = endAngle;
@@ -81,7 +80,7 @@ export function PortfolioPieChart({
           資産合計
         </text>
         <text x={CENTER} y={CENTER + 14} textAnchor="middle" className="fill-current font-mono font-bold" fontSize="18">
-          {hasData ? formatMan(totalMan) : "未記録"}
+          {hasData ? formatYen(totalYen) : "未記録"}
         </text>
       </svg>
 
@@ -94,7 +93,7 @@ export function PortfolioPieChart({
               style={{ backgroundColor: s.cat.color }}
             />
             <span className="min-w-0 flex-1 truncate text-muted-foreground">{s.cat.label}</span>
-            <span className="shrink-0">{formatMan(s.value)}</span>
+            <span className="shrink-0">{formatYen(s.value)}</span>
             <span className="w-10 shrink-0 text-right text-muted-foreground">
               {hasData ? `${Math.round(s.ratio * 100)}%` : "-"}
             </span>

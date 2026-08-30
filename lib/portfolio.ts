@@ -1,5 +1,6 @@
 // 資産ポートフォリオ(国内株式/米国株式/投資信託/金銀プラチナ)のスナップショット管理。
 // 積立クエストの「目標」とは独立した、口座全体の資産推移を記録する。
+// すべて「円」単位で計算する(v1は万円単位だったが、v2で円単位に変更した)。
 
 export type AssetCategoryKey = "domesticStocks" | "usStocks" | "mutualFunds" | "preciousMetals";
 
@@ -17,16 +18,16 @@ export const ASSET_CATEGORIES: AssetCategoryDef[] = [
   { key: "preciousMetals", label: "金銀プラチナ", color: "#c98500" },
 ];
 
-export type CategoryEntry = { currentValueMan: number; profitMan: number };
+export type CategoryEntry = { currentValueYen: number; profitYen: number };
 
 export type CategoryBreakdown = Record<AssetCategoryKey, CategoryEntry>;
 
 export function emptyBreakdown(): CategoryBreakdown {
   return {
-    domesticStocks: { currentValueMan: 0, profitMan: 0 },
-    usStocks: { currentValueMan: 0, profitMan: 0 },
-    mutualFunds: { currentValueMan: 0, profitMan: 0 },
-    preciousMetals: { currentValueMan: 0, profitMan: 0 },
+    domesticStocks: { currentValueYen: 0, profitYen: 0 },
+    usStocks: { currentValueYen: 0, profitYen: 0 },
+    mutualFunds: { currentValueYen: 0, profitYen: 0 },
+    preciousMetals: { currentValueYen: 0, profitYen: 0 },
   };
 }
 
@@ -36,16 +37,49 @@ export type PortfolioSnapshot = {
   categories: CategoryBreakdown;
 };
 
-const STORAGE_KEY = "investment-tracker:portfolio-snapshots:v1";
+const STORAGE_KEY = "investment-tracker:portfolio-snapshots:v2";
+const LEGACY_STORAGE_KEY = "investment-tracker:portfolio-snapshots:v1"; // 万円単位だった旧データ
+
+type LegacyCategoryEntry = { currentValueMan: number; profitMan: number };
+type LegacySnapshot = {
+  id: string;
+  date: string;
+  categories: Record<AssetCategoryKey, LegacyCategoryEntry>;
+};
+
+function migrateLegacySnapshot(s: LegacySnapshot): PortfolioSnapshot {
+  const categories = {} as CategoryBreakdown;
+  for (const cat of ASSET_CATEGORIES) {
+    const legacy = s.categories[cat.key];
+    categories[cat.key] = {
+      currentValueYen: legacy.currentValueMan * 10000,
+      profitYen: legacy.profitMan * 10000,
+    };
+  }
+  return { id: s.id, date: s.date, categories };
+}
 
 export function loadSnapshots(): PortfolioSnapshot[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
+    }
+    const legacyRaw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacyRaw) {
+      const legacyParsed = JSON.parse(legacyRaw);
+      if (Array.isArray(legacyParsed)) {
+        const migrated = legacyParsed
+          .map(migrateLegacySnapshot)
+          .sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
+        saveSnapshots(migrated);
+        return migrated;
+      }
+    }
+    return [];
   } catch {
     return [];
   }
@@ -82,16 +116,21 @@ export function upsertSnapshot(snapshots: PortfolioSnapshot[], categories: Categ
   );
 }
 
-export function snapshotTotals(snapshot: PortfolioSnapshot): { totalMan: number; profitMan: number } {
+export function snapshotTotals(snapshot: PortfolioSnapshot): { totalYen: number; profitYen: number } {
   return ASSET_CATEGORIES.reduce(
     (acc, cat) => {
       const entry = snapshot.categories[cat.key];
-      return { totalMan: acc.totalMan + entry.currentValueMan, profitMan: acc.profitMan + entry.profitMan };
+      return { totalYen: acc.totalYen + entry.currentValueYen, profitYen: acc.profitYen + entry.profitYen };
     },
-    { totalMan: 0, profitMan: 0 }
+    { totalYen: 0, profitYen: 0 }
   );
 }
 
 export function latestSnapshot(snapshots: PortfolioSnapshot[]): PortfolioSnapshot | null {
   return snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
+}
+
+export function formatYen(n: number) {
+  if (!Number.isFinite(n)) return "-";
+  return `${Math.round(n).toLocaleString("ja-JP")}円`;
 }

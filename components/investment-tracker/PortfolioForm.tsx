@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { formatMan } from "@/lib/investmentTracker";
-import { ASSET_CATEGORIES, type AssetCategoryKey, type CategoryBreakdown } from "@/lib/portfolio";
+import { ASSET_CATEGORIES, formatYen, type AssetCategoryKey, type CategoryBreakdown } from "@/lib/portfolio";
 
 export function PortfolioForm({
   initial,
@@ -16,8 +15,8 @@ export function PortfolioForm({
     const init = {} as Record<AssetCategoryKey, { current: string; profit: string }>;
     for (const cat of ASSET_CATEGORIES) {
       init[cat.key] = {
-        current: initial[cat.key].currentValueMan ? String(initial[cat.key].currentValueMan) : "",
-        profit: initial[cat.key].profitMan ? String(initial[cat.key].profitMan) : "",
+        current: initial[cat.key].currentValueYen ? String(initial[cat.key].currentValueYen) : "",
+        profit: initial[cat.key].profitYen ? String(initial[cat.key].profitYen) : "",
       };
     }
     return init;
@@ -28,15 +27,15 @@ export function PortfolioForm({
     const b = {} as CategoryBreakdown;
     for (const cat of ASSET_CATEGORIES) {
       b[cat.key] = {
-        currentValueMan: Number(values[cat.key].current) || 0,
-        profitMan: Number(values[cat.key].profit) || 0,
+        currentValueYen: Number(values[cat.key].current) || 0,
+        profitYen: Number(values[cat.key].profit) || 0,
       };
     }
     return b;
   }, [values]);
 
-  const totalMan = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].currentValueMan, 0);
-  const profitMan = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].profitMan, 0);
+  const totalYen = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].currentValueYen, 0);
+  const profitYen = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].profitYen, 0);
 
   function setField(key: AssetCategoryKey, field: "current" | "profit", v: string) {
     setValues((prev) => ({ ...prev, [key]: { ...prev[key], [field]: v } }));
@@ -58,7 +57,7 @@ export function PortfolioForm({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground font-mono">現在の金額(万円)</label>
+              <label className="text-xs text-muted-foreground font-mono">現在の金額(円)</label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -68,7 +67,7 @@ export function PortfolioForm({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground font-mono">含み損益(万円)</label>
+              <label className="text-xs text-muted-foreground font-mono">含み損益(円)</label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -85,13 +84,13 @@ export function PortfolioForm({
       <div className="space-y-1.5 rounded-xl gold-border bg-white/5 p-3 font-mono text-sm">
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground text-xs">資産合計額</span>
-          <span className="gold-text text-lg font-bold">{formatMan(totalMan)}</span>
+          <span className="gold-text text-lg font-bold">{formatYen(totalYen)}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground text-xs">評価損益</span>
-          <span className={profitMan >= 0 ? "neon-text font-bold" : "text-destructive font-bold"}>
-            {profitMan >= 0 ? "+" : ""}
-            {formatMan(profitMan)}
+          <span className={profitYen >= 0 ? "neon-text font-bold" : "text-destructive font-bold"}>
+            {profitYen >= 0 ? "+" : ""}
+            {formatYen(profitYen)}
           </span>
         </div>
       </div>
