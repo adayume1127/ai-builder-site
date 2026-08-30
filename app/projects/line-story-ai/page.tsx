@@ -46,18 +46,23 @@ export default function LineStoryAiPage() {
           ストーリーや小説の演出、SNS用ネタ作りに。会話の名前・アイコン・背景を自由に編集でき、
           完成したアニメーションはAI音声つき動画として保存できます。
         </p>
-        <Button
-          size="lg"
-          render={
-            <a
-              href="https://line-story-ai.vercel.app"
-              target="_blank"
-              rel="noopener noreferrer"
-            />
-          }
-        >
-          サービスを見る →
-        </Button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button
+            size="lg"
+            render={
+              <a
+                href="https://line-story-ai.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+          >
+            サービスを見る →
+          </Button>
+          <Button size="lg" variant="outline" render={<Link href="/order/line-video" />}>
+            動画制作を依頼する
+          </Button>
+        </div>
       </main>
 
       <Separator className="max-w-2xl mx-auto bg-primary/30" />

@@ -18,7 +18,7 @@ export default function Home() {
         <h2 className="font-cinzel text-sm tracking-[0.35em] gold-text mb-6">— ABOUT LUNA —</h2>
         <p className="font-zen text-muted-foreground leading-loose text-base">
           アイデアを聞いて、その日のうちに形にする——それがルナの仕事です。<br />
-          これまでに7つのサービスをリリース。思いついたら作る、を止めずに続けています。
+          これまでに複数のサービスをリリース。思いついたら作る、を止めずに続けています。
         </p>
       </section>
 

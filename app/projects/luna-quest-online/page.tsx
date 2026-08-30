@@ -52,6 +52,8 @@ const PASSIVES = [
   { lv: 400, name: "獄炎",       desc: "攻撃15%でバーン付与" },
   { lv: 500, name: "絶対覇王",   desc: "与ダメ×1.5 / 受ダメ×0.7" },
   { lv: 600, name: "神域覚醒",   desc: "全ステ×1.5 永続" },
+  { lv: 700, name: "霊域解放",   desc: "連撃100%常時発動" },
+  { lv: 800, name: "究極存在",   desc: "全ステ×2.0 永続" },
 ];
 
 export default function LunaQuestOnlinePage() {
