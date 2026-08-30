@@ -198,11 +198,6 @@ export function paceStatus(goal: Goal): PaceStatus {
 
 export const DEFAULT_EMOJIS = ["🏖️", "🏠", "🎓", "🚗", "👴", "💍", "🌍", "💰"];
 
-// 全目標の合計資産(実績評価額があればそちら優先、なければ投資資金+貯金)
-export function totalAssetsMan(goals: Goal[]): number {
-  return goals.reduce((sum, g) => sum + (g.actual.currentValueMan ?? g.investedMan + g.savingsMan), 0);
-}
-
 export type Achievement = {
   id: string;
   title: string;

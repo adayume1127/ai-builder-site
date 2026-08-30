@@ -9,17 +9,18 @@ import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
 import {
   createGoal,
-  formatMan,
   loadGoals,
   playerRank,
   saveGoals,
-  totalAssetsMan,
   type Goal,
   type NewGoalInput,
 } from "@/lib/investmentTracker";
 import {
+  formatYen,
+  latestSnapshot,
   loadSnapshots,
   saveSnapshots,
+  snapshotTotals,
   upsertSnapshot,
   type CategoryBreakdown,
   type PortfolioSnapshot,
@@ -78,7 +79,8 @@ export default function InvestmentTrackerPage() {
   }
 
   const rank = playerRank(goals);
-  const totalAssets = totalAssetsMan(goals);
+  const latestPortfolio = latestSnapshot(snapshots);
+  const totalAssets = latestPortfolio ? snapshotTotals(latestPortfolio).totalYen : 0;
 
   return (
     <div className="flex h-dvh flex-col">
@@ -87,7 +89,7 @@ export default function InvestmentTrackerPage() {
           ← ホーム
         </Link>
         <span className="truncate text-muted-foreground">
-          🌙 Lv.{rank.level} 総資産 <span className="gold-text font-bold">{formatMan(totalAssets)}</span>
+          🌙 Lv.{rank.level} 総資産 <span className="gold-text font-bold">{formatYen(totalAssets)}</span>
         </span>
       </div>
 

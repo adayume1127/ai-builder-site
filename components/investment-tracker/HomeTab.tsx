@@ -5,17 +5,21 @@ import { Button } from "@/components/ui/button";
 import { LunaCoach } from "./LunaCoach";
 import { PortfolioPieChart } from "./PortfolioPieChart";
 import {
-  formatMan,
   levelForProgress,
   paceStatus,
   playerRank,
   progressRatio,
-  totalAssetsMan,
   unlockedAchievements,
   ACHIEVEMENTS,
   type Goal,
 } from "@/lib/investmentTracker";
-import { emptyBreakdown, latestSnapshot, snapshotTotals, type PortfolioSnapshot } from "@/lib/portfolio";
+import {
+  emptyBreakdown,
+  formatYen,
+  latestSnapshot,
+  snapshotTotals,
+  type PortfolioSnapshot,
+} from "@/lib/portfolio";
 
 export function HomeTab({
   goals,
@@ -32,7 +36,6 @@ export function HomeTab({
 }) {
   const [avatarOk, setAvatarOk] = useState(true);
   const rank = playerRank(goals);
-  const totalAssets = totalAssetsMan(goals);
   const unlockedCount = unlockedAchievements(goals).length;
 
   const latest = latestSnapshot(snapshots);
@@ -87,7 +90,7 @@ export function HomeTab({
             </div>
             <div className="font-mono text-2xl font-bold">
               <span className="text-muted-foreground text-sm mr-1">総資産</span>
-              <span className="gold-text">{formatMan(totalAssets)}</span>
+              <span className="gold-text">{formatYen(portfolioTotal)}</span>
             </div>
           </div>
         </div>
