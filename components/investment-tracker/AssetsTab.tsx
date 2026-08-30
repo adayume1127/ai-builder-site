@@ -10,19 +10,24 @@ import {
   latestSnapshot,
   snapshotTotals,
   type CategoryBreakdown,
+  type ChartGranularity,
   type PortfolioSnapshot,
 } from "@/lib/portfolio";
 
 export function AssetsTab({
   snapshots,
   targetAmountYen,
+  granularity,
   onSave,
   onSaveTarget,
+  onChangeGranularity,
 }: {
   snapshots: PortfolioSnapshot[];
   targetAmountYen: number;
+  granularity: ChartGranularity;
   onSave: (breakdown: CategoryBreakdown) => void;
   onSaveTarget: (value: number) => void;
+  onChangeGranularity: (granularity: ChartGranularity) => void;
 }) {
   const latest = latestSnapshot(snapshots);
   const latestBreakdown = latest?.categories ?? emptyBreakdown();
@@ -68,7 +73,12 @@ export function AssetsTab({
 
       <div className="space-y-2">
         <h3 className="font-mono text-sm text-muted-foreground">資産推移</h3>
-        <AssetTrendChart snapshots={snapshots} targetAmountYen={targetAmountYen} />
+        <AssetTrendChart
+          snapshots={snapshots}
+          targetAmountYen={targetAmountYen}
+          granularity={granularity}
+          onChangeGranularity={onChangeGranularity}
+        />
       </div>
 
       <div className="space-y-2">

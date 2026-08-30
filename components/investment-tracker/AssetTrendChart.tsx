@@ -2,15 +2,20 @@
 
 import { useMemo, useState } from "react";
 import {
+  GRANULARITY_LABELS,
+  bucketSnapshotsByGranularity,
   formatYen,
   simulateGrowth,
   snapshotTotals,
+  type ChartGranularity,
   type PortfolioSnapshot,
 } from "@/lib/portfolio";
 
+const GRANULARITY_OPTIONS: ChartGranularity[] = ["month", "halfYear", "year"];
+
 const WIDTH = 560;
-const HEIGHT = 200;
-const PAD_LEFT = 8;
+const HEIGHT = 210;
+const PAD_LEFT = 64;
 const PAD_RIGHT = 8;
 const PAD_TOP = 20;
 const PAD_BOTTOM = 24;
@@ -18,6 +23,25 @@ const CHART_W = WIDTH - PAD_LEFT - PAD_RIGHT;
 const CHART_H = HEIGHT - PAD_TOP - PAD_BOTTOM;
 const NEON_CYAN = "oklch(0.85 0.22 195)";
 const SIM_COLOR = "#eda100"; // ゴールド系。実績(シアン)と区別できる暖色
+
+// 目盛りの間隔を50万・100万円単位を中心とした「きりのいい」数値に丸める
+const NICE_TICK_STEPS = [
+  100000, 200000, 250000, 500000, 1000000, 2000000, 2500000, 5000000, 10000000, 20000000, 25000000, 50000000,
+  100000000, 200000000, 250000000, 500000000, 1000000000,
+];
+
+function chooseTickStep(maxValue: number): number {
+  const target = Math.max(maxValue, 1) / 5;
+  for (const step of NICE_TICK_STEPS) {
+    if (step >= target) return step;
+  }
+  return NICE_TICK_STEPS[NICE_TICK_STEPS.length - 1];
+}
+
+function formatTickLabel(v: number) {
+  if (v === 0) return "0円";
+  return `${Math.round(v).toLocaleString("ja-JP")}円`;
+}
 
 function formatDateLabel(dateStr: string) {
   const [y, m, d] = dateStr.split("-");
@@ -31,20 +55,28 @@ function toTime(dateStr: string) {
 export function AssetTrendChart({
   snapshots,
   targetAmountYen,
+  granularity,
+  onChangeGranularity,
 }: {
   snapshots: PortfolioSnapshot[];
   targetAmountYen: number;
+  granularity: ChartGranularity;
+  onChangeGranularity: (granularity: ChartGranularity) => void;
 }) {
   const [simulationOn, setSimulationOn] = useState(true);
   const [hoverX, setHoverX] = useState<number | null>(null);
 
   const actualPoints = useMemo(
-    () => snapshots.map((s) => ({ date: s.date, valueYen: snapshotTotals(s).totalYen })),
-    [snapshots]
+    () =>
+      bucketSnapshotsByGranularity(snapshots, granularity).map((s) => ({
+        date: s.date,
+        valueYen: snapshotTotals(s).totalYen,
+      })),
+    [snapshots, granularity]
   );
   const simPoints = useMemo(
-    () => (simulationOn ? simulateGrowth(snapshots, targetAmountYen) : []),
-    [snapshots, targetAmountYen, simulationOn]
+    () => (simulationOn ? simulateGrowth(snapshots, targetAmountYen, granularity) : []),
+    [snapshots, targetAmountYen, simulationOn, granularity]
   );
 
   if (actualPoints.length === 0) {
@@ -71,6 +103,13 @@ export function AssetTrendChart({
   const maxV = Math.max(...allValues, 0);
   const minV = Math.min(...allValues, 0);
   const range = maxV - minV || 1;
+
+  const tickStep = chooseTickStep(maxV - minV);
+  const tickValues: number[] = [];
+  const tickStart = Math.ceil(minV / tickStep) * tickStep;
+  for (let v = tickStart; v <= maxV + tickStep * 0.001; v += tickStep) {
+    tickValues.push(v);
+  }
 
   const xAtTime = (t: number) => PAD_LEFT + ((t - minTime) / timeRange) * CHART_W;
   const yAt = (v: number) => PAD_TOP + CHART_H - ((v - minV) / range) * CHART_H;
@@ -134,19 +173,50 @@ export function AssetTrendChart({
         </button>
       </div>
 
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono text-[10px] text-muted-foreground">表示単位</span>
+        {GRANULARITY_OPTIONS.map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => onChangeGranularity(g)}
+            className={`rounded-full px-2.5 py-0.5 font-mono text-[10px] transition-colors ${
+              granularity === g
+                ? "neon-border neon-text"
+                : "border border-white/15 text-muted-foreground"
+            }`}
+          >
+            {GRANULARITY_LABELS[g]}
+          </button>
+        ))}
+      </div>
+
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="w-full"
         onMouseLeave={() => setHoverX(null)}
       >
-        <line
-          x1={PAD_LEFT}
-          y1={yAt(Math.max(minV, 0))}
-          x2={WIDTH - PAD_RIGHT}
-          y2={yAt(Math.max(minV, 0))}
-          stroke="rgba(255,255,255,0.12)"
-          strokeWidth={1}
-        />
+        {tickValues.map((v) => (
+          <g key={v}>
+            <line
+              x1={PAD_LEFT}
+              y1={yAt(v)}
+              x2={WIDTH - PAD_RIGHT}
+              y2={yAt(v)}
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth={1}
+            />
+            <text
+              x={PAD_LEFT - 6}
+              y={yAt(v) + 3}
+              fontSize="9"
+              textAnchor="end"
+              className="fill-muted-foreground font-mono"
+            >
+              {formatTickLabel(v)}
+            </text>
+          </g>
+        ))}
 
         {targetAmountYen > 0 && (
           <>
@@ -156,11 +226,11 @@ export function AssetTrendChart({
               x2={WIDTH - PAD_RIGHT}
               y2={yAt(targetAmountYen)}
               stroke="#FFD700"
-              strokeOpacity={0.5}
-              strokeWidth={1}
+              strokeOpacity={0.6}
+              strokeWidth={1.5}
               strokeDasharray="4 3"
             />
-            <text x={PAD_LEFT} y={yAt(targetAmountYen) - 4} fontSize="9" className="fill-current" fill="#FFD700">
+            <text x={WIDTH - PAD_RIGHT} y={yAt(targetAmountYen) - 4} fontSize="9" textAnchor="end" fill="#FFD700">
               目標額 {formatYen(targetAmountYen)}
             </text>
           </>

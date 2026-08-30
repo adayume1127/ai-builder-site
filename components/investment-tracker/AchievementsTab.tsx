@@ -2,8 +2,14 @@
 
 import { ACHIEVEMENTS, unlockedAchievements, type Goal } from "@/lib/investmentTracker";
 
-export function AchievementsTab({ goals }: { goals: Goal[] }) {
-  const unlocked = new Set(unlockedAchievements(goals).map((a) => a.id));
+export function AchievementsTab({
+  goals,
+  portfolioAssetsMan,
+}: {
+  goals: Goal[];
+  portfolioAssetsMan: number | null;
+}) {
+  const unlocked = new Set(unlockedAchievements(goals, portfolioAssetsMan).map((a) => a.id));
 
   return (
     <div className="space-y-4">

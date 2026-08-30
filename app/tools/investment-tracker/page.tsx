@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AchievementsTab } from "@/components/investment-tracker/AchievementsTab";
 import { AssetsTab } from "@/components/investment-tracker/AssetsTab";
 import { BottomNav, type TabKey } from "@/components/investment-tracker/BottomNav";
+import { BudgetTab } from "@/components/investment-tracker/BudgetTab";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
 import {
@@ -25,13 +26,30 @@ import {
   snapshotTotals,
   upsertSnapshot,
   type CategoryBreakdown,
+  type ChartGranularity,
   type PortfolioSnapshot,
 } from "@/lib/portfolio";
+import {
+  addCategory,
+  addTransaction,
+  loadCategories,
+  loadTransactions,
+  removeCategory,
+  removeTransaction,
+  saveCategories,
+  saveTransactions,
+  type BudgetCategory,
+  type BudgetCategoryKind,
+  type BudgetTransaction,
+} from "@/lib/household";
 
 export default function InvestmentTrackerPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [snapshots, setSnapshots] = useState<PortfolioSnapshot[]>([]);
   const [targetAmountYen, setTargetAmountYen] = useState(0);
+  const [chartGranularity, setChartGranularity] = useState<ChartGranularity>("month");
+  const [categories, setCategories] = useState<BudgetCategory[]>([]);
+  const [transactions, setTransactions] = useState<BudgetTransaction[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TabKey>("home");
@@ -39,7 +57,11 @@ export default function InvestmentTrackerPage() {
   useEffect(() => {
     setGoals(loadGoals());
     setSnapshots(loadSnapshots());
-    setTargetAmountYen(loadPortfolioSettings().targetAmountYen);
+    const settings = loadPortfolioSettings();
+    setTargetAmountYen(settings.targetAmountYen);
+    setChartGranularity(settings.chartGranularity);
+    setCategories(loadCategories());
+    setTransactions(loadTransactions());
     setLoaded(true);
   }, []);
 
@@ -56,7 +78,36 @@ export default function InvestmentTrackerPage() {
 
   function handleSaveTarget(value: number) {
     setTargetAmountYen(value);
-    savePortfolioSettings({ targetAmountYen: value });
+    savePortfolioSettings({ targetAmountYen: value, chartGranularity });
+  }
+
+  function handleChangeGranularity(value: ChartGranularity) {
+    setChartGranularity(value);
+    savePortfolioSettings({ targetAmountYen, chartGranularity: value });
+  }
+
+  function handleAddTransaction(input: Omit<BudgetTransaction, "id">) {
+    const next = addTransaction(transactions, input);
+    setTransactions(next);
+    saveTransactions(next);
+  }
+
+  function handleDeleteTransaction(id: string) {
+    const next = removeTransaction(transactions, id);
+    setTransactions(next);
+    saveTransactions(next);
+  }
+
+  function handleAddCategory(label: string, kind: BudgetCategoryKind) {
+    const next = addCategory(categories, label, kind);
+    setCategories(next);
+    saveCategories(next);
+  }
+
+  function handleDeleteCategory(id: string) {
+    const next = removeCategory(categories, id);
+    setCategories(next);
+    saveCategories(next);
   }
 
   function handleCreate(input: NewGoalInput) {
@@ -87,9 +138,10 @@ export default function InvestmentTrackerPage() {
     }
   }
 
-  const rank = playerRank(goals);
   const latestPortfolio = latestSnapshot(snapshots);
   const totalAssets = latestPortfolio ? snapshotTotals(latestPortfolio).totalYen : 0;
+  const portfolioAssetsMan = latestPortfolio ? totalAssets / 10000 : null;
+  const rank = playerRank(goals, portfolioAssetsMan);
 
   return (
     <div className="flex h-dvh flex-col">
@@ -119,6 +171,7 @@ export default function InvestmentTrackerPage() {
             <QuestTab
               goals={goals}
               totalAssetsYen={totalAssets}
+              portfolioAssetsMan={portfolioAssetsMan}
               formMode={formMode}
               onOpenCreate={() => setFormMode({ type: "create" })}
               onCloseForm={() => setFormMode({ type: "closed" })}
@@ -132,11 +185,22 @@ export default function InvestmentTrackerPage() {
             <AssetsTab
               snapshots={snapshots}
               targetAmountYen={targetAmountYen}
+              granularity={chartGranularity}
               onSave={handleSavePortfolio}
               onSaveTarget={handleSaveTarget}
+              onChangeGranularity={handleChangeGranularity}
+            />
+          ) : activeTab === "budget" ? (
+            <BudgetTab
+              categories={categories}
+              transactions={transactions}
+              onAddTransaction={handleAddTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
+              onAddCategory={handleAddCategory}
+              onDeleteCategory={handleDeleteCategory}
             />
           ) : (
-            <AchievementsTab goals={goals} />
+            <AchievementsTab goals={goals} portfolioAssetsMan={portfolioAssetsMan} />
           )}
 
           <p className="text-center text-xs text-muted-foreground">

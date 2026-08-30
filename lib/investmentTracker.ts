@@ -157,10 +157,17 @@ export function actualAnnualRate(actual: Goal["actual"]): number | null {
   return rate * 100;
 }
 
-// 現在の資産(実績評価額があればそちら優先) ÷ 目標額。0〜1にクランプ
-export function progressRatio(goal: Goal): number {
+// 現在の資産額。資産タブで記録した総資産(万円)があればそれを優先し、
+// なければ実績評価額 → 投資元本+貯金 の順にフォールバックする。
+export function currentAssetsMan(goal: Goal, portfolioAssetsMan: number | null = null): number {
+  if (portfolioAssetsMan !== null) return portfolioAssetsMan;
+  return goal.actual.currentValueMan ?? goal.investedMan + goal.savingsMan;
+}
+
+// 現在の資産 ÷ 目標額。0〜1にクランプ
+export function progressRatio(goal: Goal, portfolioAssetsMan: number | null = null): number {
   if (!Number.isFinite(goal.goalMan) || goal.goalMan <= 0) return 0;
-  const currentAssets = goal.actual.currentValueMan ?? goal.investedMan + goal.savingsMan;
+  const currentAssets = currentAssetsMan(goal, portfolioAssetsMan);
   return Math.min(1, Math.max(0, currentAssets / goal.goalMan));
 }
 
@@ -202,7 +209,7 @@ export type Achievement = {
   id: string;
   title: string;
   description: string;
-  check: (goals: Goal[]) => boolean;
+  check: (goals: Goal[], portfolioAssetsMan?: number | null) => boolean;
 };
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -240,12 +247,12 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: "goal-achieved",
     title: "目標達成",
     description: "いずれかの目標を100%達成する",
-    check: (goals) => goals.some((g) => progressRatio(g) >= 1),
+    check: (goals, portfolioAssetsMan) => goals.some((g) => progressRatio(g, portfolioAssetsMan ?? null) >= 1),
   },
 ];
 
-export function unlockedAchievements(goals: Goal[]): Achievement[] {
-  return ACHIEVEMENTS.filter((a) => a.check(goals));
+export function unlockedAchievements(goals: Goal[], portfolioAssetsMan: number | null = null): Achievement[] {
+  return ACHIEVEMENTS.filter((a) => a.check(goals, portfolioAssetsMan));
 }
 
 const PLAYER_TITLES = [
@@ -258,7 +265,7 @@ const PLAYER_TITLES = [
   "伝説の資産家",
 ];
 
-export function playerRank(goals: Goal[]): { level: number; title: string } {
-  const unlockedCount = unlockedAchievements(goals).length;
+export function playerRank(goals: Goal[], portfolioAssetsMan: number | null = null): { level: number; title: string } {
+  const unlockedCount = unlockedAchievements(goals, portfolioAssetsMan).length;
   return { level: unlockedCount + 1, title: PLAYER_TITLES[unlockedCount] };
 }

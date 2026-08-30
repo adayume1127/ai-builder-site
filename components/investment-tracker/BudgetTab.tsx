@@ -1,0 +1,286 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { SavingsTrendChart } from "./SavingsTrendChart";
+import { todayKey, formatYen } from "@/lib/portfolio";
+import {
+  addCategory,
+  cumulativeSavingsTrend,
+  monthKey,
+  monthlySummaries,
+  type BudgetCategory,
+  type BudgetCategoryKind,
+  type BudgetTransaction,
+} from "@/lib/household";
+
+const inputClass =
+  "w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]";
+
+export function BudgetTab({
+  categories,
+  transactions,
+  onAddTransaction,
+  onDeleteTransaction,
+  onAddCategory,
+  onDeleteCategory,
+}: {
+  categories: BudgetCategory[];
+  transactions: BudgetTransaction[];
+  onAddTransaction: (input: Omit<BudgetTransaction, "id">) => void;
+  onDeleteTransaction: (id: string) => void;
+  onAddCategory: (label: string, kind: BudgetCategoryKind) => void;
+  onDeleteCategory: (id: string) => void;
+}) {
+  const [kind, setKind] = useState<BudgetCategoryKind>("expense");
+  const expenseCategories = categories.filter((c) => c.kind === "expense");
+  const incomeCategories = categories.filter((c) => c.kind === "income");
+  const kindCategories = kind === "expense" ? expenseCategories : incomeCategories;
+
+  const [categoryId, setCategoryId] = useState(kindCategories[0]?.id ?? "");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(todayKey());
+  const [memo, setMemo] = useState("");
+
+  const [newCategoryLabel, setNewCategoryLabel] = useState("");
+  const [newCategoryKind, setNewCategoryKind] = useState<BudgetCategoryKind>("expense");
+
+  const summaries = monthlySummaries(transactions, categories);
+  const trend = cumulativeSavingsTrend(summaries);
+  const currentMonth = monthKey(todayKey());
+  const thisMonth = summaries.find((s) => s.month === currentMonth) ?? {
+    month: currentMonth,
+    incomeYen: 0,
+    expenseYen: 0,
+    savingsYen: 0,
+  };
+
+  const categoryLabelById = new Map(categories.map((c) => [c.id, c.label]));
+
+  function handleKindChange(next: BudgetCategoryKind) {
+    setKind(next);
+    const nextCategories = next === "expense" ? expenseCategories : incomeCategories;
+    setCategoryId(nextCategories[0]?.id ?? "");
+  }
+
+  function handleSubmit() {
+    const value = Number(amount);
+    if (!categoryId || !Number.isFinite(value) || value <= 0 || !date) return;
+    onAddTransaction({ date, categoryId, amount: value, memo });
+    setAmount("");
+    setMemo("");
+  }
+
+  function handleAddCategory() {
+    const label = newCategoryLabel.trim();
+    if (!label) return;
+    onAddCategory(label, newCategoryKind);
+    setNewCategoryLabel("");
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center space-y-1">
+        <h2 className="neon-text text-xl font-bold font-mono">家計簿</h2>
+        <p className="text-sm text-muted-foreground">収入・支出を記録して、貯金額の推移を確認できます。</p>
+      </div>
+
+      <div className="gold-border grid grid-cols-3 gap-2 rounded-2xl bg-white/5 p-4 text-center font-mono">
+        <div>
+          <p className="text-[10px] text-muted-foreground">今月の収入</p>
+          <p className="neon-text text-sm font-bold">{formatYen(thisMonth.incomeYen)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground">今月の支出</p>
+          <p className="neon-text-pink text-sm font-bold">{formatYen(thisMonth.expenseYen)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground">今月の貯金</p>
+          <p className={`text-sm font-bold ${thisMonth.savingsYen >= 0 ? "gold-text" : "text-destructive"}`}>
+            {formatYen(thisMonth.savingsYen)}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="font-mono text-sm text-muted-foreground">貯金額推移</h3>
+        <SavingsTrendChart points={trend} />
+      </div>
+
+      <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <h3 className="font-mono text-sm text-muted-foreground">記録を追加</h3>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => handleKindChange("expense")}
+            className={`flex-1 rounded-lg px-3 py-1.5 font-mono text-xs ${
+              kind === "expense" ? "neon-border-pink neon-text-pink" : "border border-white/15 text-muted-foreground"
+            }`}
+          >
+            支出
+          </button>
+          <button
+            type="button"
+            onClick={() => handleKindChange("income")}
+            className={`flex-1 rounded-lg px-3 py-1.5 font-mono text-xs ${
+              kind === "income" ? "neon-border neon-text" : "border border-white/15 text-muted-foreground"
+            }`}
+          >
+            収入
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass}>
+            {kindCategories.length === 0 && <option value="">カテゴリなし</option>}
+            {kindCategories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="金額(円)"
+            className={inputClass}
+          />
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
+          <input
+            type="text"
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="メモ(任意)"
+            className={inputClass}
+          />
+        </div>
+
+        <Button type="button" className="w-full" onClick={handleSubmit} disabled={!categoryId}>
+          追加する
+        </Button>
+      </div>
+
+      <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <h3 className="font-mono text-sm text-muted-foreground">カテゴリ管理</h3>
+
+        <div className="space-y-2">
+          <p className="text-[10px] text-muted-foreground">支出</p>
+          <div className="flex flex-wrap gap-1.5">
+            {expenseCategories.map((c) => (
+              <span
+                key={c.id}
+                className="flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2 py-1 font-mono text-[11px]"
+              >
+                {c.label}
+                {!c.isDefault && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteCategory(c.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label={`${c.label}を削除`}
+                  >
+                    ×
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground">収入</p>
+          <div className="flex flex-wrap gap-1.5">
+            {incomeCategories.map((c) => (
+              <span
+                key={c.id}
+                className="flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2 py-1 font-mono text-[11px]"
+              >
+                {c.label}
+                {!c.isDefault && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteCategory(c.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label={`${c.label}を削除`}
+                  >
+                    ×
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <select
+            value={newCategoryKind}
+            onChange={(e) => setNewCategoryKind(e.target.value as BudgetCategoryKind)}
+            className={`${inputClass} w-24 shrink-0`}
+          >
+            <option value="expense">支出</option>
+            <option value="income">収入</option>
+          </select>
+          <input
+            type="text"
+            value={newCategoryLabel}
+            onChange={(e) => setNewCategoryLabel(e.target.value)}
+            placeholder="新しいカテゴリ名"
+            className={inputClass}
+          />
+          <button
+            type="button"
+            onClick={handleAddCategory}
+            className="shrink-0 rounded-lg gold-border gold-text px-3 py-1.5 font-mono text-xs"
+          >
+            追加
+          </button>
+        </div>
+      </div>
+
+      {transactions.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="font-mono text-sm text-muted-foreground">記録の履歴</h3>
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full font-mono text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-muted-foreground">
+                  <th className="px-3 py-2 text-left font-normal">日付</th>
+                  <th className="px-3 py-2 text-left font-normal">カテゴリ</th>
+                  <th className="px-3 py-2 text-right font-normal">金額</th>
+                  <th className="px-3 py-2 text-left font-normal">メモ</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {[...transactions].reverse().map((t) => {
+                  const isIncome = categories.find((c) => c.id === t.categoryId)?.kind === "income";
+                  return (
+                    <tr key={t.id} className="border-b border-white/5 last:border-0">
+                      <td className="px-3 py-2">{t.date}</td>
+                      <td className="px-3 py-2">{categoryLabelById.get(t.categoryId) ?? "-"}</td>
+                      <td className={`px-3 py-2 text-right ${isIncome ? "neon-text" : "neon-text-pink"}`}>
+                        {isIncome ? "+" : "-"}
+                        {formatYen(t.amount)}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">{t.memo || "-"}</td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => onDeleteTransaction(t.id)}
+                          className="text-muted-foreground hover:text-destructive"
+                          aria-label="削除"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

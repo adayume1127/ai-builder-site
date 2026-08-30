@@ -164,21 +164,37 @@ export function formatYen(n: number) {
   return `${Math.round(n).toLocaleString("ja-JP")}円`;
 }
 
-// ===== シミュレーション設定(目標額) =====
+// ===== シミュレーション設定(目標額・グラフ表示単位) =====
 
-export type PortfolioSettings = { targetAmountYen: number };
+export type ChartGranularity = "month" | "halfYear" | "year";
+
+export const GRANULARITY_LABELS: Record<ChartGranularity, string> = {
+  month: "月単位",
+  halfYear: "半年単位",
+  year: "年単位",
+};
+
+export type PortfolioSettings = { targetAmountYen: number; chartGranularity: ChartGranularity };
 
 const SETTINGS_KEY = "investment-tracker:portfolio-settings:v1";
 
+function isChartGranularity(v: unknown): v is ChartGranularity {
+  return v === "month" || v === "halfYear" || v === "year";
+}
+
 export function loadPortfolioSettings(): PortfolioSettings {
-  if (typeof window === "undefined") return { targetAmountYen: 0 };
+  const fallback: PortfolioSettings = { targetAmountYen: 0, chartGranularity: "month" };
+  if (typeof window === "undefined") return fallback;
   try {
     const raw = window.localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return { targetAmountYen: 0 };
+    if (!raw) return fallback;
     const parsed = JSON.parse(raw);
-    return { targetAmountYen: Number(parsed?.targetAmountYen) || 0 };
+    return {
+      targetAmountYen: Number(parsed?.targetAmountYen) || 0,
+      chartGranularity: isChartGranularity(parsed?.chartGranularity) ? parsed.chartGranularity : "month",
+    };
   } catch {
-    return { targetAmountYen: 0 };
+    return fallback;
   }
 }
 
@@ -199,10 +215,22 @@ const SIMULATION_ANNUAL_RATE = 0.05;
 const SIMULATION_DEFAULT_HORIZON_YEARS = 20;
 const SIMULATION_MAX_HORIZON_YEARS = 40;
 
+const GRANULARITY_MONTHS: Record<ChartGranularity, number> = { month: 1, halfYear: 6, year: 12 };
+
+function addMonthsKey(startDate: Date, months: number): string {
+  const d = new Date(startDate);
+  d.setMonth(d.getMonth() + months);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // 初めて資産を記録した日を起点に、その時点の資産額と直近の毎月積立額をもとに
-// 年利5%で複利運用した場合の資産推移を年単位で計算する。
+// 年利5%で複利運用した場合の資産推移を計算する(表示間隔は granularity で指定)。
 // 目標額が設定されていれば、到達するまで(最大40年)伸ばして表示する。
-export function simulateGrowth(snapshots: PortfolioSnapshot[], targetAmountYen: number): SimulationPoint[] {
+export function simulateGrowth(
+  snapshots: PortfolioSnapshot[],
+  targetAmountYen: number,
+  granularity: ChartGranularity = "month"
+): SimulationPoint[] {
   const first = firstSnapshot(snapshots);
   const latest = latestSnapshot(snapshots);
   if (!first || !latest) return [];
@@ -225,16 +253,30 @@ export function simulateGrowth(snapshots: PortfolioSnapshot[], targetAmountYen: 
     }
   }
 
-  const points: SimulationPoint[] = [];
+  const stepMonths = GRANULARITY_MONTHS[granularity];
+  const totalMonths = horizonYears * 12;
+  const points: SimulationPoint[] = [{ date: first.date, year: 0, valueYen: startValue }];
   let value = startValue;
-  for (let year = 0; year <= horizonYears; year++) {
-    if (year > 0) {
-      for (let m = 0; m < 12; m++) value = value * (1 + monthlyRate) + monthlyContribution;
+  for (let m = 1; m <= totalMonths; m++) {
+    value = value * (1 + monthlyRate) + monthlyContribution;
+    if (m % stepMonths === 0 || m === totalMonths) {
+      points.push({ date: addMonthsKey(startDate, m), year: m / 12, valueYen: value });
     }
-    const d = new Date(startDate);
-    d.setFullYear(d.getFullYear() + year);
-    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    points.push({ date: dateKey, year, valueYen: value });
   }
   return points;
+}
+
+// スナップショットを granularity の期間ごとに束ね、各期間で最新の1件だけを残す
+export function bucketSnapshotsByGranularity(
+  snapshots: PortfolioSnapshot[],
+  granularity: ChartGranularity
+): PortfolioSnapshot[] {
+  if (granularity === "month") return snapshots;
+  const map = new Map<string, PortfolioSnapshot>();
+  for (const s of snapshots) {
+    const [y, m] = s.date.split("-").map(Number);
+    const key = granularity === "year" ? `${y}` : `${y}-H${m <= 6 ? 1 : 2}`;
+    map.set(key, s);
+  }
+  return Array.from(map.values());
 }

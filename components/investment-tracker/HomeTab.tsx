@@ -35,12 +35,14 @@ export function HomeTab({
   onGoToAssets: () => void;
 }) {
   const [avatarOk, setAvatarOk] = useState(true);
-  const rank = playerRank(goals);
-  const unlockedCount = unlockedAchievements(goals).length;
 
   const latest = latestSnapshot(snapshots);
   const portfolioBreakdown = latest?.categories ?? emptyBreakdown();
   const portfolioTotal = latest ? snapshotTotals(latest).totalYen : 0;
+  const portfolioAssetsMan = latest ? portfolioTotal / 10000 : null;
+
+  const rank = playerRank(goals, portfolioAssetsMan);
+  const unlockedCount = unlockedAchievements(goals, portfolioAssetsMan).length;
 
   const coach = (() => {
     if (goals.length === 0) {
@@ -49,7 +51,7 @@ export function HomeTab({
         message: "まだ目標がないみたい。老後資金でも旅行資金でもOK、まずは1つ作ってみよう🌙",
       };
     }
-    const achievedGoal = goals.find((g) => progressRatio(g) >= 1);
+    const achievedGoal = goals.find((g) => progressRatio(g, portfolioAssetsMan) >= 1);
     if (achievedGoal) {
       return {
         variant: "celebrate" as const,
@@ -132,7 +134,7 @@ export function HomeTab({
         <div className="space-y-2">
           <h2 className="font-mono text-sm text-muted-foreground">クエスト進捗</h2>
           {goals.map((goal) => {
-            const ratio = progressRatio(goal);
+            const ratio = progressRatio(goal, portfolioAssetsMan);
             const level = levelForProgress(ratio);
             return (
               <button

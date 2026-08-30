@@ -8,6 +8,7 @@ import { ProgressBar } from "./ProgressBar";
 import { ActualReturnForm } from "./ActualReturnForm";
 import {
   actualAnnualRate,
+  currentAssetsMan,
   formatMan,
   formatYearsMonths,
   levelForProgress,
@@ -27,24 +28,26 @@ const PACE_LABEL: Record<string, { text: string; className: string }> = {
 
 export function GoalCard({
   goal,
+  portfolioAssetsMan = null,
   onUpdate,
   onEdit,
   onDelete,
 }: {
   goal: Goal;
+  portfolioAssetsMan?: number | null;
   onUpdate: (goal: Goal) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const [showActualForm, setShowActualForm] = useState(false);
 
-  const ratio = progressRatio(goal);
+  const ratio = progressRatio(goal, portfolioAssetsMan);
   const level = levelForProgress(ratio);
   const required = requiredMonthlyPayment(goal);
   const projected = projectedFutureValue(goal);
   const pace = paceStatus(goal);
   const rate = actualAnnualRate(goal.actual);
-  const currentAssets = goal.actual.currentValueMan ?? goal.investedMan + goal.savingsMan;
+  const currentAssets = currentAssetsMan(goal, portfolioAssetsMan);
   const paceInfo = PACE_LABEL[pace];
 
   return (
@@ -72,9 +75,14 @@ export function GoalCard({
             <span className="text-muted-foreground text-xs">目標額</span>
             <span>{formatMan(goal.goalMan)}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs">現在の資産</span>
-            <span>{formatMan(currentAssets)}</span>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-xs">現在の資産</span>
+              <span>{formatMan(currentAssets)}</span>
+            </div>
+            {portfolioAssetsMan !== null && (
+              <span className="text-right text-[9px] text-muted-foreground">資産タブの記録より</span>
+            )}
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs">目標年数</span>

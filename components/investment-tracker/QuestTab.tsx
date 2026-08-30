@@ -11,6 +11,7 @@ export type FormMode = { type: "closed" } | { type: "create" } | { type: "edit";
 export function QuestTab({
   goals,
   totalAssetsYen,
+  portfolioAssetsMan,
   formMode,
   onOpenCreate,
   onCloseForm,
@@ -22,6 +23,7 @@ export function QuestTab({
 }: {
   goals: Goal[];
   totalAssetsYen: number;
+  portfolioAssetsMan: number | null;
   formMode: FormMode;
   onOpenCreate: () => void;
   onCloseForm: () => void;
@@ -61,6 +63,7 @@ export function QuestTab({
           <GoalCard
             key={goal.id}
             goal={goal}
+            portfolioAssetsMan={portfolioAssetsMan}
             onUpdate={onUpdate}
             onEdit={() => onEditOpen(goal.id)}
             onDelete={() => onDelete(goal.id)}

@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 
-export type TabKey = "home" | "quest" | "assets" | "achievements";
+export type TabKey = "home" | "quest" | "assets" | "budget" | "achievements";
 
 const TABS: { key: TabKey; label: string; icon: string; emoji: string }[] = [
   { key: "home", label: "ホーム", icon: "/tools/investment-tracker/nav-home.png", emoji: "🏠" },
   { key: "quest", label: "クエスト", icon: "/tools/investment-tracker/nav-quest.png", emoji: "🗺️" },
   { key: "assets", label: "資産", icon: "/tools/investment-tracker/coin-stack.png", emoji: "💰" },
+  { key: "budget", label: "家計簿", icon: "/tools/investment-tracker/nav-budget.png", emoji: "📒" },
   { key: "achievements", label: "実績", icon: "/tools/investment-tracker/nav-achievements.png", emoji: "🏆" },
 ];
 
