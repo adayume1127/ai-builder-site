@@ -28,7 +28,11 @@ function chooseTickStep(maxAbs: number): number {
 }
 
 function formatTickLabel(v: number) {
-  if (v === 0) return "0円";
+  if (!Number.isFinite(v) || v === 0) return "0円";
+  // 8桁以上の金額をそのまま表示するとY軸の左端でテキストが見切れるため、万円単位で短く表示する
+  if (Math.abs(v) >= 10000) {
+    return `${(v / 10000).toLocaleString("ja-JP", { maximumFractionDigits: 1 })}万円`;
+  }
   return `${Math.round(v).toLocaleString("ja-JP")}円`;
 }
 
