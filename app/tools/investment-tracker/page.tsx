@@ -6,6 +6,8 @@ import { AchievementsTab } from "@/components/investment-tracker/AchievementsTab
 import { AssetsTab } from "@/components/investment-tracker/AssetsTab";
 import { BottomNav, type TabKey } from "@/components/investment-tracker/BottomNav";
 import { BudgetTab } from "@/components/investment-tracker/BudgetTab";
+import { DiagnosisResult } from "@/components/investment-tracker/household/DiagnosisResult";
+import { HouseholdSetup } from "@/components/investment-tracker/household/HouseholdSetup";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
 import {
@@ -50,6 +52,17 @@ import {
   type BudgetCategoryKind,
   type BudgetTransaction,
 } from "@/lib/household";
+import {
+  loadHouseholdDiagnosisSettings,
+  loadHouseholdProfile,
+  loadSpecialExpenses,
+  saveHouseholdDiagnosisSettings,
+  saveHouseholdProfile,
+  saveSpecialExpenses,
+  type HouseholdProfile,
+  type SpecialExpense,
+  type SpecialExpenseMode,
+} from "@/lib/householdDiagnosis";
 
 export default function InvestmentTrackerPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -60,6 +73,9 @@ export default function InvestmentTrackerPage() {
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [transactions, setTransactions] = useState<BudgetTransaction[]>([]);
   const [savingsGoalYen, setSavingsGoalYen] = useState(0);
+  const [householdProfile, setHouseholdProfile] = useState<HouseholdProfile | null>(null);
+  const [specialExpenses, setSpecialExpenses] = useState<SpecialExpense[]>([]);
+  const [specialExpenseMode, setSpecialExpenseMode] = useState<SpecialExpenseMode>("unknown");
   const [loaded, setLoaded] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TabKey>("home");
@@ -74,6 +90,9 @@ export default function InvestmentTrackerPage() {
     setCategories(loadCategories());
     setTransactions(loadTransactions());
     setSavingsGoalYen(loadHouseholdSettings().monthlySavingsGoalYen);
+    setHouseholdProfile(loadHouseholdProfile());
+    setSpecialExpenses(loadSpecialExpenses());
+    setSpecialExpenseMode(loadHouseholdDiagnosisSettings().specialExpenseMode);
     setLoaded(true);
   }, []);
 
@@ -138,6 +157,15 @@ export default function InvestmentTrackerPage() {
     saveCategories(next);
   }
 
+  function handleCompleteDiagnosis(profile: HouseholdProfile, items: SpecialExpense[], mode: SpecialExpenseMode) {
+    setHouseholdProfile(profile);
+    setSpecialExpenses(items);
+    setSpecialExpenseMode(mode);
+    saveHouseholdProfile(profile);
+    saveSpecialExpenses(items);
+    saveHouseholdDiagnosisSettings({ specialExpenseMode: mode });
+  }
+
   function handleCreate(input: NewGoalInput) {
     persist([...goals, createGoal(input)]);
     setFormMode({ type: "closed" });
@@ -167,6 +195,7 @@ export default function InvestmentTrackerPage() {
   }
 
   const nowMonth = monthKey(new Date().toISOString().slice(0, 10));
+  const transactionMonthCount = new Set(transactions.map((t) => monthKey(t.date))).size;
   const householdNetYen = totalNetYen(transactions, categories);
   const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
   const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
@@ -237,17 +266,31 @@ export default function InvestmentTrackerPage() {
               onSaveOpeningCashBalance={handleSaveOpeningCashBalance}
             />
           ) : activeTab === "budget" ? (
-            <BudgetTab
-              categories={categories}
-              transactions={transactions}
-              savingsGoalYen={savingsGoalYen}
-              onAddTransaction={handleAddTransaction}
-              onDeleteTransaction={handleDeleteTransaction}
-              onAddCategory={handleAddCategory}
-              onDeleteCategory={handleDeleteCategory}
-              onSaveSavingsGoal={handleSaveSavingsGoal}
-              onSetCategoryBudget={handleSetCategoryBudget}
-            />
+            !householdProfile ? (
+              <HouseholdSetup onComplete={handleCompleteDiagnosis} />
+            ) : (
+              <div className="space-y-6">
+                <DiagnosisResult
+                  profile={householdProfile}
+                  specialExpenses={specialExpenses}
+                  specialExpenseMode={specialExpenseMode}
+                  transactionMonthCount={transactionMonthCount}
+                />
+                <div className="border-t border-white/10 pt-6">
+                  <BudgetTab
+                    categories={categories}
+                    transactions={transactions}
+                    savingsGoalYen={savingsGoalYen}
+                    onAddTransaction={handleAddTransaction}
+                    onDeleteTransaction={handleDeleteTransaction}
+                    onAddCategory={handleAddCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                    onSaveSavingsGoal={handleSaveSavingsGoal}
+                    onSetCategoryBudget={handleSetCategoryBudget}
+                  />
+                </div>
+              </div>
+            )
           ) : (
             <AchievementsTab
               goals={goals}
