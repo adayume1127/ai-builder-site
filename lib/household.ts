@@ -4,12 +4,17 @@
 
 export type BudgetCategoryKind = "income" | "expense";
 
+// 支出の性質。固定費/貯金/投資は家計診断のMonthlyBudgetですでに月初に確保額を引いてあるため、
+// このタグで「今月あと使えるお金」の実績集計(variable/special)から除外し、二重計上を防ぐ。
+export type ExpenseNature = "fixed" | "variable" | "special" | "savings" | "investment";
+
 export type BudgetCategory = {
   id: string;
   label: string;
   kind: BudgetCategoryKind;
   isDefault: boolean;
   monthlyBudgetYen?: number; // 支出カテゴリのみ意味を持つ、任意の月間予算上限
+  nature?: ExpenseNature; // 支出カテゴリのみ意味を持つ。未設定は categoryNature() が "variable" にフォールバック
 };
 
 export type BudgetTransaction = {
@@ -23,17 +28,39 @@ export type BudgetTransaction = {
 export const DEFAULT_CATEGORIES: BudgetCategory[] = [
   { id: "salary", label: "給与", kind: "income", isDefault: true },
   { id: "other-income", label: "その他収入", kind: "income", isDefault: true },
-  { id: "food", label: "食費", kind: "expense", isDefault: true },
-  { id: "housing", label: "家賃・住居費", kind: "expense", isDefault: true },
-  { id: "utilities", label: "光熱費", kind: "expense", isDefault: true },
-  { id: "communication", label: "通信費", kind: "expense", isDefault: true },
-  { id: "transport", label: "交通費", kind: "expense", isDefault: true },
-  { id: "entertainment", label: "娯楽費", kind: "expense", isDefault: true },
-  { id: "other-expense", label: "その他支出", kind: "expense", isDefault: true },
+  { id: "food", label: "食費", kind: "expense", isDefault: true, nature: "variable" },
+  { id: "housing", label: "家賃・住居費", kind: "expense", isDefault: true, nature: "fixed" },
+  { id: "utilities", label: "光熱費", kind: "expense", isDefault: true, nature: "fixed" },
+  { id: "communication", label: "通信費", kind: "expense", isDefault: true, nature: "fixed" },
+  { id: "transport", label: "交通費", kind: "expense", isDefault: true, nature: "variable" },
+  { id: "entertainment", label: "娯楽費", kind: "expense", isDefault: true, nature: "variable" },
+  { id: "other-expense", label: "その他支出", kind: "expense", isDefault: true, nature: "variable" },
+  {
+    id: "special-expense",
+    label: "特別費(旅行・帰省など)",
+    kind: "expense",
+    isDefault: true,
+    nature: "special",
+  },
 ];
+
+// nature未設定の支出カテゴリ(既存データ・分類し忘れた新規カテゴリ)は "variable" 扱いにする。
+// 収入カテゴリにnatureは意味を持たないが、型の都合上 "variable" を返しておく(呼び出し側はkindで先に弾く想定)。
+export function categoryNature(category: BudgetCategory): ExpenseNature {
+  return category.nature ?? "variable";
+}
 
 const CATEGORIES_KEY = "investment-tracker:budget-categories:v1";
 const TRANSACTIONS_KEY = "investment-tracker:budget-transactions:v1";
+
+const SPECIAL_EXPENSE_CATEGORY: BudgetCategory = DEFAULT_CATEGORIES.find((c) => c.id === "special-expense")!;
+
+// 既存ユーザーが保存済みのカテゴリ配列には「特別費」カテゴリが無いため、読み込み時に1件だけ補う軽量マイグレーション。
+// 取引データ(BudgetTransaction)には一切触れない。
+function withSpecialExpenseCategory(categories: BudgetCategory[]): BudgetCategory[] {
+  const hasSpecial = categories.some((c) => c.nature === "special");
+  return hasSpecial ? categories : [...categories, SPECIAL_EXPENSE_CATEGORY];
+}
 
 export function loadCategories(): BudgetCategory[] {
   if (typeof window === "undefined") return DEFAULT_CATEGORIES;
@@ -42,7 +69,7 @@ export function loadCategories(): BudgetCategory[] {
     if (!raw) return DEFAULT_CATEGORIES;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_CATEGORIES;
-    return parsed;
+    return withSpecialExpenseCategory(parsed);
   } catch {
     return DEFAULT_CATEGORIES;
   }
@@ -57,8 +84,13 @@ export function saveCategories(categories: BudgetCategory[]) {
   }
 }
 
-export function addCategory(categories: BudgetCategory[], label: string, kind: BudgetCategoryKind): BudgetCategory[] {
-  return [...categories, { id: crypto.randomUUID(), label, kind, isDefault: false }];
+export function addCategory(
+  categories: BudgetCategory[],
+  label: string,
+  kind: BudgetCategoryKind,
+  nature?: ExpenseNature
+): BudgetCategory[] {
+  return [...categories, { id: crypto.randomUUID(), label, kind, isDefault: false, nature }];
 }
 
 // デフォルトカテゴリは削除不可(記録済みの取引が迷子にならないように)
@@ -71,6 +103,10 @@ export function setCategoryBudget(categories: BudgetCategory[], id: string, budg
   return categories.map((c) =>
     c.id === id ? { ...c, monthlyBudgetYen: budgetYen > 0 ? budgetYen : undefined } : c
   );
+}
+
+export function setCategoryNature(categories: BudgetCategory[], id: string, nature: ExpenseNature): BudgetCategory[] {
+  return categories.map((c) => (c.id === id ? { ...c, nature } : c));
 }
 
 export function loadTransactions(): BudgetTransaction[] {

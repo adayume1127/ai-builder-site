@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { monthKey, transactionsByDate, type BudgetCategory, type BudgetTransaction } from "@/lib/household";
+import { todayKey } from "@/lib/portfolio";
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -31,7 +32,7 @@ export function BudgetCalendar({
   const [viewYear, viewMonthNum] = viewMonth.split("-").map(Number);
   const firstWeekday = new Date(viewYear, viewMonthNum - 1, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonthNum, 0).getDate();
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = todayKey();
 
   const cells: (number | null)[] = [
     ...Array.from({ length: firstWeekday }, () => null),

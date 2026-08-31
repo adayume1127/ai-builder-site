@@ -6,7 +6,9 @@ import { AchievementsTab } from "@/components/investment-tracker/AchievementsTab
 import { AssetsTab } from "@/components/investment-tracker/AssetsTab";
 import { BottomNav, type TabKey } from "@/components/investment-tracker/BottomNav";
 import { BudgetTab } from "@/components/investment-tracker/BudgetTab";
+import { BudgetPlanAdopt } from "@/components/investment-tracker/household/BudgetPlanAdopt";
 import { DiagnosisResult } from "@/components/investment-tracker/household/DiagnosisResult";
+import { HouseholdDashboard } from "@/components/investment-tracker/household/HouseholdDashboard";
 import { HouseholdSetup } from "@/components/investment-tracker/household/HouseholdSetup";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
@@ -28,6 +30,7 @@ import {
   savePortfolioSettings,
   saveSnapshots,
   snapshotTotals,
+  todayKey,
   upsertSnapshot,
   type CategoryBreakdown,
   type ChartGranularity,
@@ -63,6 +66,18 @@ import {
   type SpecialExpense,
   type SpecialExpenseMode,
 } from "@/lib/householdDiagnosis";
+import {
+  buildHouseholdDashboardSummary,
+  createMonthlyBudget,
+  getMonthlyBudget,
+  latestMonthlyBudget,
+  loadMonthlyBudgets,
+  recommendMonthlyBudget,
+  saveMonthlyBudgets,
+  upsertMonthlyBudget,
+  type MonthlyBudget,
+  type RecommendedMonthlyBudget,
+} from "@/lib/monthlyBudget";
 
 export default function InvestmentTrackerPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -76,6 +91,9 @@ export default function InvestmentTrackerPage() {
   const [householdProfile, setHouseholdProfile] = useState<HouseholdProfile | null>(null);
   const [specialExpenses, setSpecialExpenses] = useState<SpecialExpense[]>([]);
   const [specialExpenseMode, setSpecialExpenseMode] = useState<SpecialExpenseMode>("unknown");
+  const [monthlyBudgets, setMonthlyBudgets] = useState<MonthlyBudget[]>([]);
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [showDiagnosisDetail, setShowDiagnosisDetail] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TabKey>("home");
@@ -93,6 +111,7 @@ export default function InvestmentTrackerPage() {
     setHouseholdProfile(loadHouseholdProfile());
     setSpecialExpenses(loadSpecialExpenses());
     setSpecialExpenseMode(loadHouseholdDiagnosisSettings().specialExpenseMode);
+    setMonthlyBudgets(loadMonthlyBudgets());
     setLoaded(true);
   }, []);
 
@@ -166,6 +185,20 @@ export default function InvestmentTrackerPage() {
     saveHouseholdDiagnosisSettings({ specialExpenseMode: mode });
   }
 
+  function handleAdoptMonthlyBudget(values: RecommendedMonthlyBudget) {
+    const month = monthKey(todayKey());
+    const isFirstAdoption = monthlyBudgets.length === 0;
+    const next = upsertMonthlyBudget(monthlyBudgets, createMonthlyBudget(values, month));
+    setMonthlyBudgets(next);
+    saveMonthlyBudgets(next);
+    setEditingBudget(false);
+    // 初回採用時のみ、既存の「毎月の貯金目標」(マネークエスト・BudgetTabの進捗バーが参照)にも同期する。
+    // 以降は今月の予算(MonthlyBudget)と貯金目標を独立して編集できる。
+    if (isFirstAdoption) {
+      handleSaveSavingsGoal(values.plannedCashSavings);
+    }
+  }
+
   function handleCreate(input: NewGoalInput) {
     persist([...goals, createGoal(input)]);
     setFormMode({ type: "closed" });
@@ -194,8 +227,13 @@ export default function InvestmentTrackerPage() {
     }
   }
 
-  const nowMonth = monthKey(new Date().toISOString().slice(0, 10));
+  const nowMonth = monthKey(todayKey());
   const transactionMonthCount = new Set(transactions.map((t) => monthKey(t.date))).size;
+  const recommendedMonthlyBudget = householdProfile
+    ? recommendMonthlyBudget(householdProfile, specialExpenses, specialExpenseMode)
+    : null;
+  const currentMonthlyBudget = getMonthlyBudget(monthlyBudgets, nowMonth);
+  const previousMonthlyBudget = latestMonthlyBudget(monthlyBudgets);
   const householdNetYen = totalNetYen(transactions, categories);
   const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
   const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
@@ -266,16 +304,42 @@ export default function InvestmentTrackerPage() {
               onSaveOpeningCashBalance={handleSaveOpeningCashBalance}
             />
           ) : activeTab === "budget" ? (
-            !householdProfile ? (
+            !householdProfile || !recommendedMonthlyBudget ? (
               <HouseholdSetup onComplete={handleCompleteDiagnosis} />
+            ) : !currentMonthlyBudget || editingBudget ? (
+              <BudgetPlanAdopt
+                variant={monthlyBudgets.length === 0 ? "initial" : "rollover"}
+                diagnosisRecommendation={recommendedMonthlyBudget}
+                previousBudget={editingBudget ? currentMonthlyBudget : previousMonthlyBudget}
+                onAdopt={handleAdoptMonthlyBudget}
+              />
             ) : (
               <div className="space-y-6">
-                <DiagnosisResult
-                  profile={householdProfile}
-                  specialExpenses={specialExpenses}
-                  specialExpenseMode={specialExpenseMode}
-                  transactionMonthCount={transactionMonthCount}
+                <HouseholdDashboard
+                  summary={buildHouseholdDashboardSummary(currentMonthlyBudget, transactions, categories)}
+                  categories={categories}
+                  transactions={transactions}
+                  month={nowMonth}
+                  onEditBudget={() => setEditingBudget(true)}
+                  onGoToDiagnosis={() => setShowDiagnosisDetail((v) => !v)}
                 />
+                {showDiagnosisDetail && (
+                  <div className="space-y-2 border-t border-white/10 pt-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowDiagnosisDetail(false)}
+                      className="font-mono text-xs text-muted-foreground underline"
+                    >
+                      閉じる ▲
+                    </button>
+                    <DiagnosisResult
+                      profile={householdProfile}
+                      specialExpenses={specialExpenses}
+                      specialExpenseMode={specialExpenseMode}
+                      transactionMonthCount={transactionMonthCount}
+                    />
+                  </div>
+                )}
                 <div className="border-t border-white/10 pt-6">
                   <BudgetTab
                     categories={categories}
