@@ -35,13 +35,16 @@ import {
   addCategory,
   addTransaction,
   loadCategories,
+  loadHouseholdSettings,
   loadTransactions,
   monthKey,
   monthlySummaries,
   removeCategory,
   removeTransaction,
   saveCategories,
+  saveHouseholdSettings,
   saveTransactions,
+  setCategoryBudget,
   totalNetYen,
   type BudgetCategory,
   type BudgetCategoryKind,
@@ -56,6 +59,7 @@ export default function InvestmentTrackerPage() {
   const [openingCashBalanceYen, setOpeningCashBalanceYen] = useState(0);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [transactions, setTransactions] = useState<BudgetTransaction[]>([]);
+  const [savingsGoalYen, setSavingsGoalYen] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TabKey>("home");
@@ -69,6 +73,7 @@ export default function InvestmentTrackerPage() {
     setOpeningCashBalanceYen(settings.openingCashBalanceYen);
     setCategories(loadCategories());
     setTransactions(loadTransactions());
+    setSavingsGoalYen(loadHouseholdSettings().monthlySavingsGoalYen);
     setLoaded(true);
   }, []);
 
@@ -122,6 +127,17 @@ export default function InvestmentTrackerPage() {
     saveCategories(next);
   }
 
+  function handleSaveSavingsGoal(value: number) {
+    setSavingsGoalYen(value);
+    saveHouseholdSettings({ monthlySavingsGoalYen: value });
+  }
+
+  function handleSetCategoryBudget(id: string, budgetYen: number) {
+    const next = setCategoryBudget(categories, id, budgetYen);
+    setCategories(next);
+    saveCategories(next);
+  }
+
   function handleCreate(input: NewGoalInput) {
     persist([...goals, createGoal(input)]);
     setFormMode({ type: "closed" });
@@ -150,10 +166,9 @@ export default function InvestmentTrackerPage() {
     }
   }
 
+  const nowMonth = monthKey(new Date().toISOString().slice(0, 10));
   const householdNetYen = totalNetYen(transactions, categories);
-  const thisMonthSummary = monthlySummaries(transactions, categories).find(
-    (s) => s.month === monthKey(new Date().toISOString().slice(0, 10))
-  );
+  const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
   const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
 
   const latestPortfolio = latestSnapshot(snapshots);
@@ -225,13 +240,24 @@ export default function InvestmentTrackerPage() {
             <BudgetTab
               categories={categories}
               transactions={transactions}
+              savingsGoalYen={savingsGoalYen}
               onAddTransaction={handleAddTransaction}
               onDeleteTransaction={handleDeleteTransaction}
               onAddCategory={handleAddCategory}
               onDeleteCategory={handleDeleteCategory}
+              onSaveSavingsGoal={handleSaveSavingsGoal}
+              onSetCategoryBudget={handleSetCategoryBudget}
             />
           ) : (
-            <AchievementsTab goals={goals} portfolioAssetsMan={portfolioAssetsMan} />
+            <AchievementsTab
+              goals={goals}
+              portfolioAssetsMan={portfolioAssetsMan}
+              transactions={transactions}
+              categories={categories}
+              savingsGoalYen={savingsGoalYen}
+              hasInvestmentRecord={latestPortfolio !== null}
+              nowMonth={nowMonth}
+            />
           )}
 
           <p className="text-center text-xs text-muted-foreground">
