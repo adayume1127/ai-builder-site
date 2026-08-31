@@ -2,7 +2,13 @@
 // 積立クエストの「目標」とは独立した、口座全体の資産推移を記録する。
 // すべて「円」単位で計算する(v1は万円単位だったが、v2で円単位に変更した)。
 
-export type AssetCategoryKey = "domesticStocks" | "usStocks" | "mutualFunds" | "preciousMetals" | "cashSavings";
+export type AssetCategoryKey =
+  | "domesticStocks"
+  | "usStocks"
+  | "mutualFunds"
+  | "preciousMetals"
+  | "cashSavings"
+  | "unspecified";
 
 export type AssetCategoryDef = {
   key: AssetCategoryKey;
@@ -17,20 +23,22 @@ export const ASSET_CATEGORIES: AssetCategoryDef[] = [
   { key: "mutualFunds", label: "投資信託", color: "#199e70" },
   { key: "preciousMetals", label: "金銀プラチナ", color: "#c98500" },
   { key: "cashSavings", label: "預金", color: "#a855f7" },
+  { key: "unspecified", label: "未分類(まとめて入力)", color: "#e2507a" },
 ];
 
-// 家計簿と連動せず手入力するカテゴリ(預金は家計簿の収支から自動計算する)
-export type ManualAssetCategoryKey = Exclude<AssetCategoryKey, "cashSavings">;
-export const MANUAL_ASSET_CATEGORIES: { key: ManualAssetCategoryKey; label: string; color: string }[] =
+// 投資先を指定して個別入力するカテゴリ(「詳細を入力」モードで使う。未分類・預金は含まない)
+export type DetailedAssetCategoryKey = Exclude<AssetCategoryKey, "cashSavings" | "unspecified">;
+export const DETAILED_ASSET_CATEGORIES: { key: DetailedAssetCategoryKey; label: string; color: string }[] =
   ASSET_CATEGORIES.filter(
-    (c): c is AssetCategoryDef & { key: ManualAssetCategoryKey } => c.key !== "cashSavings"
+    (c): c is AssetCategoryDef & { key: DetailedAssetCategoryKey } =>
+      c.key !== "cashSavings" && c.key !== "unspecified"
   );
 
 export type CategoryEntry = { currentValueYen: number; profitYen: number; monthlyContributionYen: number };
 
 export type CategoryBreakdown = Record<AssetCategoryKey, CategoryEntry>;
 
-function zeroEntry(): CategoryEntry {
+export function zeroEntry(): CategoryEntry {
   return { currentValueYen: 0, profitYen: 0, monthlyContributionYen: 0 };
 }
 
@@ -41,6 +49,7 @@ export function emptyBreakdown(): CategoryBreakdown {
     mutualFunds: zeroEntry(),
     preciousMetals: zeroEntry(),
     cashSavings: zeroEntry(),
+    unspecified: zeroEntry(),
   };
 }
 
@@ -59,23 +68,27 @@ export type PortfolioSnapshot = {
   categories: CategoryBreakdown;
 };
 
-const STORAGE_KEY = "investment-tracker:portfolio-snapshots:v4";
+const STORAGE_KEY = "investment-tracker:portfolio-snapshots:v5";
+const LEGACY_V4_KEY = "investment-tracker:portfolio-snapshots:v4"; // 未分類カテゴリなし
 const LEGACY_V3_KEY = "investment-tracker:portfolio-snapshots:v3"; // 預金カテゴリなし
 const LEGACY_V2_KEY = "investment-tracker:portfolio-snapshots:v2"; // 円単位・毎月積立額なし
 const LEGACY_V1_KEY = "investment-tracker:portfolio-snapshots:v1"; // 万円単位
 
 type LegacyV1CategoryEntry = { currentValueMan: number; profitMan: number };
-type LegacyV1Snapshot = { id: string; date: string; categories: Record<AssetCategoryKey, LegacyV1CategoryEntry> };
+type LegacyV1Snapshot = { id: string; date: string; categories: Record<DetailedAssetCategoryKey, LegacyV1CategoryEntry> };
 
 type LegacyV2CategoryEntry = { currentValueYen: number; profitYen: number };
-type LegacyV2Snapshot = { id: string; date: string; categories: Record<AssetCategoryKey, LegacyV2CategoryEntry> };
+type LegacyV2Snapshot = { id: string; date: string; categories: Record<DetailedAssetCategoryKey, LegacyV2CategoryEntry> };
 
-type LegacyV3Snapshot = { id: string; date: string; categories: Record<AssetCategoryKey, CategoryEntry> };
+type LegacyV3Snapshot = { id: string; date: string; categories: Record<DetailedAssetCategoryKey, CategoryEntry> };
+
+type LegacyV4CategoryKey = Exclude<AssetCategoryKey, "unspecified">;
+type LegacyV4Snapshot = { id: string; date: string; categories: Record<LegacyV4CategoryKey, CategoryEntry> };
 
 // v1〜v3は「預金」カテゴリが存在しなかったため、当時の4カテゴリのみを対象にする
 function migrateV1ToV2(s: LegacyV1Snapshot): LegacyV2Snapshot {
-  const categories = {} as Record<AssetCategoryKey, LegacyV2CategoryEntry>;
-  for (const cat of MANUAL_ASSET_CATEGORIES) {
+  const categories = {} as Record<DetailedAssetCategoryKey, LegacyV2CategoryEntry>;
+  for (const cat of DETAILED_ASSET_CATEGORIES) {
     const legacy = s.categories[cat.key];
     categories[cat.key] = { currentValueYen: legacy.currentValueMan * 10000, profitYen: legacy.profitMan * 10000 };
   }
@@ -83,16 +96,21 @@ function migrateV1ToV2(s: LegacyV1Snapshot): LegacyV2Snapshot {
 }
 
 function migrateV2ToV3(s: LegacyV2Snapshot): LegacyV3Snapshot {
-  const categories = {} as Record<AssetCategoryKey, CategoryEntry>;
-  for (const cat of MANUAL_ASSET_CATEGORIES) {
+  const categories = {} as Record<DetailedAssetCategoryKey, CategoryEntry>;
+  for (const cat of DETAILED_ASSET_CATEGORIES) {
     const legacy = s.categories[cat.key];
     categories[cat.key] = { ...legacy, monthlyContributionYen: 0 };
   }
   return { id: s.id, date: s.date, categories };
 }
 
-function migrateV3ToV4(s: LegacyV3Snapshot): PortfolioSnapshot {
-  const categories = { ...s.categories, cashSavings: zeroEntry() } as CategoryBreakdown;
+function migrateV3ToV4(s: LegacyV3Snapshot): LegacyV4Snapshot {
+  const categories = { ...s.categories, cashSavings: zeroEntry() } as Record<LegacyV4CategoryKey, CategoryEntry>;
+  return { id: s.id, date: s.date, categories };
+}
+
+function migrateV4ToV5(s: LegacyV4Snapshot): PortfolioSnapshot {
+  const categories = { ...s.categories, unspecified: zeroEntry() } as CategoryBreakdown;
   return { id: s.id, date: s.date, categories };
 }
 
@@ -106,12 +124,25 @@ export function loadSnapshots(): PortfolioSnapshot[] {
       return parsed.sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
     }
 
+    const v4Raw = window.localStorage.getItem(LEGACY_V4_KEY);
+    if (v4Raw) {
+      const v4Parsed = JSON.parse(v4Raw);
+      if (Array.isArray(v4Parsed)) {
+        const migrated = v4Parsed
+          .map(migrateV4ToV5)
+          .sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
+        saveSnapshots(migrated);
+        return migrated;
+      }
+    }
+
     const v3Raw = window.localStorage.getItem(LEGACY_V3_KEY);
     if (v3Raw) {
       const v3Parsed = JSON.parse(v3Raw);
       if (Array.isArray(v3Parsed)) {
         const migrated = v3Parsed
           .map(migrateV3ToV4)
+          .map(migrateV4ToV5)
           .sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
         saveSnapshots(migrated);
         return migrated;
@@ -125,6 +156,7 @@ export function loadSnapshots(): PortfolioSnapshot[] {
         const migrated = v2Parsed
           .map(migrateV2ToV3)
           .map(migrateV3ToV4)
+          .map(migrateV4ToV5)
           .sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
         saveSnapshots(migrated);
         return migrated;
@@ -139,6 +171,7 @@ export function loadSnapshots(): PortfolioSnapshot[] {
           .map(migrateV1ToV2)
           .map(migrateV2ToV3)
           .map(migrateV3ToV4)
+          .map(migrateV4ToV5)
           .sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
         saveSnapshots(migrated);
         return migrated;
