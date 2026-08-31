@@ -31,7 +31,8 @@ const NICE_TICK_STEPS = [
 ];
 
 function chooseTickStep(maxValue: number): number {
-  const target = Math.max(maxValue, 1) / 5;
+  const safeMax = Number.isFinite(maxValue) ? maxValue : 0;
+  const target = Math.max(safeMax, 1) / 5;
   for (const step of NICE_TICK_STEPS) {
     if (step >= target) return step;
   }
@@ -39,7 +40,7 @@ function chooseTickStep(maxValue: number): number {
 }
 
 function formatTickLabel(v: number) {
-  if (v === 0) return "0円";
+  if (!Number.isFinite(v) || v === 0) return "0円";
   return `${Math.round(v).toLocaleString("ja-JP")}円`;
 }
 

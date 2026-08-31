@@ -10,6 +10,7 @@ import {
   latestSnapshot,
   snapshotTotals,
   type CategoryBreakdown,
+  type CategoryEntry,
   type ChartGranularity,
   type PortfolioSnapshot,
 } from "@/lib/portfolio";
@@ -18,21 +19,30 @@ export function AssetsTab({
   snapshots,
   targetAmountYen,
   granularity,
+  cashCategory,
+  openingCashBalanceYen,
   onSave,
   onSaveTarget,
   onChangeGranularity,
+  onSaveOpeningCashBalance,
 }: {
   snapshots: PortfolioSnapshot[];
   targetAmountYen: number;
   granularity: ChartGranularity;
+  cashCategory: CategoryEntry;
+  openingCashBalanceYen: number;
   onSave: (breakdown: CategoryBreakdown) => void;
   onSaveTarget: (value: number) => void;
   onChangeGranularity: (granularity: ChartGranularity) => void;
+  onSaveOpeningCashBalance: (value: number) => void;
 }) {
   const latest = latestSnapshot(snapshots);
   const latestBreakdown = latest?.categories ?? emptyBreakdown();
   const latestTotal = latest ? snapshotTotals(latest).totalYen : 0;
   const [targetInput, setTargetInput] = useState(targetAmountYen ? String(targetAmountYen) : "");
+  const [openingInput, setOpeningInput] = useState(
+    openingCashBalanceYen ? String(openingCashBalanceYen) : ""
+  );
 
   return (
     <div className="space-y-6">
@@ -55,7 +65,7 @@ export function AssetsTab({
             inputMode="decimal"
             value={targetInput}
             onChange={(e) => setTargetInput(e.target.value)}
-            placeholder="例: 10000000"
+            placeholder="例: 1000万円なら 10000000"
             className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
           />
           <button
@@ -81,9 +91,33 @@ export function AssetsTab({
         />
       </div>
 
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <label className="text-xs text-muted-foreground font-mono">預金の初期残高(円)</label>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            inputMode="decimal"
+            value={openingInput}
+            onChange={(e) => setOpeningInput(e.target.value)}
+            placeholder="例: 500000"
+            className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+          />
+          <button
+            type="button"
+            onClick={() => onSaveOpeningCashBalance(Number(openingInput) || 0)}
+            className="shrink-0 rounded-lg gold-border gold-text px-3 py-1.5 font-mono text-xs"
+          >
+            設定
+          </button>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          家計簿の記録を始める前からあった預金・現金があれば、ここに設定してください。以降は家計簿タブの収入・支出が自動で反映されます。
+        </p>
+      </div>
+
       <div className="space-y-2">
         <h3 className="font-mono text-sm text-muted-foreground">内訳を入力</h3>
-        <PortfolioForm initial={latestBreakdown} onSave={onSave} />
+        <PortfolioForm initial={latestBreakdown} cashCategory={cashCategory} onSave={onSave} />
       </div>
 
       {snapshots.length > 0 && (

@@ -139,6 +139,27 @@ export function cumulativeSavingsTrend(summaries: MonthlySummary[]): SavingsTren
   });
 }
 
+// 記録開始からの収入-支出の累計(資産タブの「預金」に自動反映する)
+export function totalNetYen(transactions: BudgetTransaction[], categories: BudgetCategory[]): number {
+  const kindById = new Map(categories.map((c) => [c.id, c.kind]));
+  let net = 0;
+  for (const t of transactions) {
+    const kind = kindById.get(t.categoryId);
+    net += kind === "income" ? t.amount : -t.amount;
+  }
+  return net;
+}
+
+export function transactionsByDate(transactions: BudgetTransaction[]): Map<string, BudgetTransaction[]> {
+  const map = new Map<string, BudgetTransaction[]>();
+  for (const t of transactions) {
+    const list = map.get(t.date) ?? [];
+    list.push(t);
+    map.set(t.date, list);
+  }
+  return map;
+}
+
 export function categoryTotalsForMonth(
   transactions: BudgetTransaction[],
   categories: BudgetCategory[],

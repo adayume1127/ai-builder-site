@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { BudgetCalendar } from "./BudgetCalendar";
 import { SavingsTrendChart } from "./SavingsTrendChart";
 import { todayKey, formatYen } from "@/lib/portfolio";
 import {
@@ -9,6 +10,7 @@ import {
   cumulativeSavingsTrend,
   monthKey,
   monthlySummaries,
+  transactionsByDate,
   type BudgetCategory,
   type BudgetCategoryKind,
   type BudgetTransaction,
@@ -41,6 +43,8 @@ export function BudgetTab({
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayKey());
   const [memo, setMemo] = useState("");
+  const byDate = transactionsByDate(transactions);
+  const selectedDateTransactions = byDate.get(date) ?? [];
 
   const [newCategoryLabel, setNewCategoryLabel] = useState("");
   const [newCategoryKind, setNewCategoryKind] = useState<BudgetCategoryKind>("expense");
@@ -108,7 +112,39 @@ export function BudgetTab({
       </div>
 
       <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-        <h3 className="font-mono text-sm text-muted-foreground">記録を追加</h3>
+        <h3 className="font-mono text-sm text-muted-foreground">記録を追加(日付をタッチして選択)</h3>
+
+        <BudgetCalendar transactions={transactions} categories={categories} selectedDate={date} onSelectDate={setDate} />
+
+        <p className="text-center font-mono text-xs">
+          <span className="text-muted-foreground">選択中の日付: </span>
+          <span className="neon-text font-bold">{date}</span>
+        </p>
+
+        {selectedDateTransactions.length > 0 && (
+          <div className="space-y-1 rounded-lg border border-white/10 bg-white/[0.02] p-2">
+            {selectedDateTransactions.map((t) => {
+              const isIncome = categories.find((c) => c.id === t.categoryId)?.kind === "income";
+              return (
+                <div key={t.id} className="flex items-center justify-between font-mono text-xs">
+                  <span className="text-muted-foreground">{categoryLabelById.get(t.categoryId) ?? "-"}</span>
+                  <span className={isIncome ? "neon-text" : "neon-text-pink"}>
+                    {isIncome ? "+" : "-"}
+                    {formatYen(t.amount)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteTransaction(t.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label="削除"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex gap-2">
           <button
@@ -148,13 +184,12 @@ export function BudgetTab({
             placeholder="金額(円)"
             className={inputClass}
           />
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
           <input
             type="text"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             placeholder="メモ(任意)"
-            className={inputClass}
+            className={`${inputClass} col-span-2`}
           />
         </div>
 

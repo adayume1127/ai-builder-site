@@ -17,6 +17,8 @@ import {
   type NewGoalInput,
 } from "@/lib/investmentTracker";
 import {
+  deriveCashCategory,
+  emptyBreakdown,
   formatYen,
   latestSnapshot,
   loadPortfolioSettings,
@@ -34,10 +36,13 @@ import {
   addTransaction,
   loadCategories,
   loadTransactions,
+  monthKey,
+  monthlySummaries,
   removeCategory,
   removeTransaction,
   saveCategories,
   saveTransactions,
+  totalNetYen,
   type BudgetCategory,
   type BudgetCategoryKind,
   type BudgetTransaction,
@@ -48,6 +53,7 @@ export default function InvestmentTrackerPage() {
   const [snapshots, setSnapshots] = useState<PortfolioSnapshot[]>([]);
   const [targetAmountYen, setTargetAmountYen] = useState(0);
   const [chartGranularity, setChartGranularity] = useState<ChartGranularity>("month");
+  const [openingCashBalanceYen, setOpeningCashBalanceYen] = useState(0);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [transactions, setTransactions] = useState<BudgetTransaction[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -60,6 +66,7 @@ export default function InvestmentTrackerPage() {
     const settings = loadPortfolioSettings();
     setTargetAmountYen(settings.targetAmountYen);
     setChartGranularity(settings.chartGranularity);
+    setOpeningCashBalanceYen(settings.openingCashBalanceYen);
     setCategories(loadCategories());
     setTransactions(loadTransactions());
     setLoaded(true);
@@ -78,12 +85,17 @@ export default function InvestmentTrackerPage() {
 
   function handleSaveTarget(value: number) {
     setTargetAmountYen(value);
-    savePortfolioSettings({ targetAmountYen: value, chartGranularity });
+    savePortfolioSettings({ targetAmountYen: value, chartGranularity, openingCashBalanceYen });
   }
 
   function handleChangeGranularity(value: ChartGranularity) {
     setChartGranularity(value);
-    savePortfolioSettings({ targetAmountYen, chartGranularity: value });
+    savePortfolioSettings({ targetAmountYen, chartGranularity: value, openingCashBalanceYen });
+  }
+
+  function handleSaveOpeningCashBalance(value: number) {
+    setOpeningCashBalanceYen(value);
+    savePortfolioSettings({ targetAmountYen, chartGranularity, openingCashBalanceYen: value });
   }
 
   function handleAddTransaction(input: Omit<BudgetTransaction, "id">) {
@@ -138,9 +150,23 @@ export default function InvestmentTrackerPage() {
     }
   }
 
+  const householdNetYen = totalNetYen(transactions, categories);
+  const thisMonthSummary = monthlySummaries(transactions, categories).find(
+    (s) => s.month === monthKey(new Date().toISOString().slice(0, 10))
+  );
+  const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
+
   const latestPortfolio = latestSnapshot(snapshots);
-  const totalAssets = latestPortfolio ? snapshotTotals(latestPortfolio).totalYen : 0;
-  const portfolioAssetsMan = latestPortfolio ? totalAssets / 10000 : null;
+  const liveBreakdown: CategoryBreakdown = {
+    ...(latestPortfolio?.categories ?? emptyBreakdown()),
+    cashSavings: cashCategory,
+  };
+  const manualAssetsTotal = latestPortfolio
+    ? snapshotTotals(latestPortfolio).totalYen - latestPortfolio.categories.cashSavings.currentValueYen
+    : 0;
+  const totalAssets = manualAssetsTotal + cashCategory.currentValueYen;
+  const hasAssetData = latestPortfolio !== null || openingCashBalanceYen !== 0 || transactions.length > 0;
+  const portfolioAssetsMan = hasAssetData ? totalAssets / 10000 : null;
   const rank = playerRank(goals, portfolioAssetsMan);
 
   return (
@@ -159,7 +185,9 @@ export default function InvestmentTrackerPage() {
           {!loaded ? null : activeTab === "home" ? (
             <HomeTab
               goals={goals}
-              snapshots={snapshots}
+              portfolioBreakdown={liveBreakdown}
+              portfolioTotal={totalAssets}
+              portfolioAssetsMan={portfolioAssetsMan}
               onGoToQuest={() => {
                 setActiveTab("quest");
                 if (goals.length === 0) setFormMode({ type: "create" });
@@ -186,9 +214,12 @@ export default function InvestmentTrackerPage() {
               snapshots={snapshots}
               targetAmountYen={targetAmountYen}
               granularity={chartGranularity}
+              cashCategory={cashCategory}
+              openingCashBalanceYen={openingCashBalanceYen}
               onSave={handleSavePortfolio}
               onSaveTarget={handleSaveTarget}
               onChangeGranularity={handleChangeGranularity}
+              onSaveOpeningCashBalance={handleSaveOpeningCashBalance}
             />
           ) : activeTab === "budget" ? (
             <BudgetTab

@@ -2,7 +2,7 @@
 // 積立クエストの「目標」とは独立した、口座全体の資産推移を記録する。
 // すべて「円」単位で計算する(v1は万円単位だったが、v2で円単位に変更した)。
 
-export type AssetCategoryKey = "domesticStocks" | "usStocks" | "mutualFunds" | "preciousMetals";
+export type AssetCategoryKey = "domesticStocks" | "usStocks" | "mutualFunds" | "preciousMetals" | "cashSavings";
 
 export type AssetCategoryDef = {
   key: AssetCategoryKey;
@@ -16,18 +16,40 @@ export const ASSET_CATEGORIES: AssetCategoryDef[] = [
   { key: "usStocks", label: "米国株式", color: "#d95926" },
   { key: "mutualFunds", label: "投資信託", color: "#199e70" },
   { key: "preciousMetals", label: "金銀プラチナ", color: "#c98500" },
+  { key: "cashSavings", label: "預金", color: "#a855f7" },
 ];
+
+// 家計簿と連動せず手入力するカテゴリ(預金は家計簿の収支から自動計算する)
+export type ManualAssetCategoryKey = Exclude<AssetCategoryKey, "cashSavings">;
+export const MANUAL_ASSET_CATEGORIES: { key: ManualAssetCategoryKey; label: string; color: string }[] =
+  ASSET_CATEGORIES.filter(
+    (c): c is AssetCategoryDef & { key: ManualAssetCategoryKey } => c.key !== "cashSavings"
+  );
 
 export type CategoryEntry = { currentValueYen: number; profitYen: number; monthlyContributionYen: number };
 
 export type CategoryBreakdown = Record<AssetCategoryKey, CategoryEntry>;
 
+function zeroEntry(): CategoryEntry {
+  return { currentValueYen: 0, profitYen: 0, monthlyContributionYen: 0 };
+}
+
 export function emptyBreakdown(): CategoryBreakdown {
   return {
-    domesticStocks: { currentValueYen: 0, profitYen: 0, monthlyContributionYen: 0 },
-    usStocks: { currentValueYen: 0, profitYen: 0, monthlyContributionYen: 0 },
-    mutualFunds: { currentValueYen: 0, profitYen: 0, monthlyContributionYen: 0 },
-    preciousMetals: { currentValueYen: 0, profitYen: 0, monthlyContributionYen: 0 },
+    domesticStocks: zeroEntry(),
+    usStocks: zeroEntry(),
+    mutualFunds: zeroEntry(),
+    preciousMetals: zeroEntry(),
+    cashSavings: zeroEntry(),
+  };
+}
+
+// 家計簿の記録(初期預金額+収入-支出の累計)から「預金」カテゴリの値を自動算出する
+export function deriveCashCategory(openingCashBalanceYen: number, netYen: number, thisMonthNetYen: number): CategoryEntry {
+  return {
+    currentValueYen: openingCashBalanceYen + netYen,
+    profitYen: 0,
+    monthlyContributionYen: Math.max(0, thisMonthNetYen),
   };
 }
 
@@ -37,7 +59,8 @@ export type PortfolioSnapshot = {
   categories: CategoryBreakdown;
 };
 
-const STORAGE_KEY = "investment-tracker:portfolio-snapshots:v3";
+const STORAGE_KEY = "investment-tracker:portfolio-snapshots:v4";
+const LEGACY_V3_KEY = "investment-tracker:portfolio-snapshots:v3"; // 預金カテゴリなし
 const LEGACY_V2_KEY = "investment-tracker:portfolio-snapshots:v2"; // 円単位・毎月積立額なし
 const LEGACY_V1_KEY = "investment-tracker:portfolio-snapshots:v1"; // 万円単位
 
@@ -47,21 +70,29 @@ type LegacyV1Snapshot = { id: string; date: string; categories: Record<AssetCate
 type LegacyV2CategoryEntry = { currentValueYen: number; profitYen: number };
 type LegacyV2Snapshot = { id: string; date: string; categories: Record<AssetCategoryKey, LegacyV2CategoryEntry> };
 
+type LegacyV3Snapshot = { id: string; date: string; categories: Record<AssetCategoryKey, CategoryEntry> };
+
+// v1〜v3は「預金」カテゴリが存在しなかったため、当時の4カテゴリのみを対象にする
 function migrateV1ToV2(s: LegacyV1Snapshot): LegacyV2Snapshot {
   const categories = {} as Record<AssetCategoryKey, LegacyV2CategoryEntry>;
-  for (const cat of ASSET_CATEGORIES) {
+  for (const cat of MANUAL_ASSET_CATEGORIES) {
     const legacy = s.categories[cat.key];
     categories[cat.key] = { currentValueYen: legacy.currentValueMan * 10000, profitYen: legacy.profitMan * 10000 };
   }
   return { id: s.id, date: s.date, categories };
 }
 
-function migrateV2ToV3(s: LegacyV2Snapshot): PortfolioSnapshot {
-  const categories = {} as CategoryBreakdown;
-  for (const cat of ASSET_CATEGORIES) {
+function migrateV2ToV3(s: LegacyV2Snapshot): LegacyV3Snapshot {
+  const categories = {} as Record<AssetCategoryKey, CategoryEntry>;
+  for (const cat of MANUAL_ASSET_CATEGORIES) {
     const legacy = s.categories[cat.key];
     categories[cat.key] = { ...legacy, monthlyContributionYen: 0 };
   }
+  return { id: s.id, date: s.date, categories };
+}
+
+function migrateV3ToV4(s: LegacyV3Snapshot): PortfolioSnapshot {
+  const categories = { ...s.categories, cashSavings: zeroEntry() } as CategoryBreakdown;
   return { id: s.id, date: s.date, categories };
 }
 
@@ -75,12 +106,25 @@ export function loadSnapshots(): PortfolioSnapshot[] {
       return parsed.sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
     }
 
+    const v3Raw = window.localStorage.getItem(LEGACY_V3_KEY);
+    if (v3Raw) {
+      const v3Parsed = JSON.parse(v3Raw);
+      if (Array.isArray(v3Parsed)) {
+        const migrated = v3Parsed
+          .map(migrateV3ToV4)
+          .sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
+        saveSnapshots(migrated);
+        return migrated;
+      }
+    }
+
     const v2Raw = window.localStorage.getItem(LEGACY_V2_KEY);
     if (v2Raw) {
       const v2Parsed = JSON.parse(v2Raw);
       if (Array.isArray(v2Parsed)) {
         const migrated = v2Parsed
           .map(migrateV2ToV3)
+          .map(migrateV3ToV4)
           .sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
         saveSnapshots(migrated);
         return migrated;
@@ -94,6 +138,7 @@ export function loadSnapshots(): PortfolioSnapshot[] {
         const migrated = v1Parsed
           .map(migrateV1ToV2)
           .map(migrateV2ToV3)
+          .map(migrateV3ToV4)
           .sort((a: PortfolioSnapshot, b: PortfolioSnapshot) => a.date.localeCompare(b.date));
         saveSnapshots(migrated);
         return migrated;
@@ -174,7 +219,11 @@ export const GRANULARITY_LABELS: Record<ChartGranularity, string> = {
   year: "年単位",
 };
 
-export type PortfolioSettings = { targetAmountYen: number; chartGranularity: ChartGranularity };
+export type PortfolioSettings = {
+  targetAmountYen: number;
+  chartGranularity: ChartGranularity;
+  openingCashBalanceYen: number;
+};
 
 const SETTINGS_KEY = "investment-tracker:portfolio-settings:v1";
 
@@ -183,7 +232,7 @@ function isChartGranularity(v: unknown): v is ChartGranularity {
 }
 
 export function loadPortfolioSettings(): PortfolioSettings {
-  const fallback: PortfolioSettings = { targetAmountYen: 0, chartGranularity: "month" };
+  const fallback: PortfolioSettings = { targetAmountYen: 0, chartGranularity: "month", openingCashBalanceYen: 0 };
   if (typeof window === "undefined") return fallback;
   try {
     const raw = window.localStorage.getItem(SETTINGS_KEY);
@@ -192,6 +241,7 @@ export function loadPortfolioSettings(): PortfolioSettings {
     return {
       targetAmountYen: Number(parsed?.targetAmountYen) || 0,
       chartGranularity: isChartGranularity(parsed?.chartGranularity) ? parsed.chartGranularity : "month",
+      openingCashBalanceYen: Number(parsed?.openingCashBalanceYen) || 0,
     };
   } catch {
     return fallback;

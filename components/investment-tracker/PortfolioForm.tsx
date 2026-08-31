@@ -2,20 +2,30 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ASSET_CATEGORIES, formatYen, type AssetCategoryKey, type CategoryBreakdown } from "@/lib/portfolio";
+import {
+  ASSET_CATEGORIES,
+  MANUAL_ASSET_CATEGORIES,
+  formatYen,
+  type CategoryBreakdown,
+  type CategoryEntry,
+  type ManualAssetCategoryKey,
+} from "@/lib/portfolio";
 
 type FieldValues = { current: string; profit: string; monthly: string };
+type ManualCategoryKey = ManualAssetCategoryKey;
 
 export function PortfolioForm({
   initial,
+  cashCategory,
   onSave,
 }: {
   initial: CategoryBreakdown;
+  cashCategory: CategoryEntry;
   onSave: (breakdown: CategoryBreakdown) => void;
 }) {
-  const [values, setValues] = useState<Record<AssetCategoryKey, FieldValues>>(() => {
-    const init = {} as Record<AssetCategoryKey, FieldValues>;
-    for (const cat of ASSET_CATEGORIES) {
+  const [values, setValues] = useState<Record<ManualCategoryKey, FieldValues>>(() => {
+    const init = {} as Record<ManualCategoryKey, FieldValues>;
+    for (const cat of MANUAL_ASSET_CATEGORIES) {
       init[cat.key] = {
         current: initial[cat.key].currentValueYen ? String(initial[cat.key].currentValueYen) : "",
         profit: initial[cat.key].profitYen ? String(initial[cat.key].profitYen) : "",
@@ -27,8 +37,8 @@ export function PortfolioForm({
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   const breakdown = useMemo<CategoryBreakdown>(() => {
-    const b = {} as CategoryBreakdown;
-    for (const cat of ASSET_CATEGORIES) {
+    const b = { cashSavings: cashCategory } as CategoryBreakdown;
+    for (const cat of MANUAL_ASSET_CATEGORIES) {
       b[cat.key] = {
         currentValueYen: Number(values[cat.key].current) || 0,
         profitYen: Number(values[cat.key].profit) || 0,
@@ -36,13 +46,13 @@ export function PortfolioForm({
       };
     }
     return b;
-  }, [values]);
+  }, [values, cashCategory]);
 
   const totalYen = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].currentValueYen, 0);
   const profitYen = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].profitYen, 0);
   const monthlyTotalYen = ASSET_CATEGORIES.reduce((sum, cat) => sum + breakdown[cat.key].monthlyContributionYen, 0);
 
-  function setField(key: AssetCategoryKey, field: keyof FieldValues, v: string) {
+  function setField(key: ManualCategoryKey, field: keyof FieldValues, v: string) {
     setValues((prev) => ({ ...prev, [key]: { ...prev[key], [field]: v } }));
     setSavedAt(null);
   }
@@ -52,9 +62,29 @@ export function PortfolioForm({
     setSavedAt(Date.now());
   }
 
+  const cashCategoryDef = ASSET_CATEGORIES.find((c) => c.key === "cashSavings")!;
+
   return (
     <div className="space-y-4">
-      {ASSET_CATEGORIES.map((cat) => (
+      <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <div className="flex items-center gap-2 font-mono text-sm font-bold">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cashCategoryDef.color }} />
+          {cashCategoryDef.label}
+        </div>
+        <div className="flex items-center justify-between font-mono text-sm">
+          <span className="text-xs text-muted-foreground">現在の金額(円)</span>
+          <span className="font-bold">{formatYen(cashCategory.currentValueYen)}</span>
+        </div>
+        <div className="flex items-center justify-between font-mono text-sm">
+          <span className="text-xs text-muted-foreground">今月の積立(円)</span>
+          <span className="font-bold">{formatYen(cashCategory.monthlyContributionYen)}</span>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          家計簿タブの収入・支出の記録から自動計算されます(手入力不要)。
+        </p>
+      </div>
+
+      {MANUAL_ASSET_CATEGORIES.map((cat) => (
         <div key={cat.key} className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3">
           <div className="flex items-center gap-2 font-mono text-sm font-bold">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cat.color }} />

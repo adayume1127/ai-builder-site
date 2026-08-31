@@ -13,33 +13,26 @@ import {
   ACHIEVEMENTS,
   type Goal,
 } from "@/lib/investmentTracker";
-import {
-  emptyBreakdown,
-  formatYen,
-  latestSnapshot,
-  snapshotTotals,
-  type PortfolioSnapshot,
-} from "@/lib/portfolio";
+import { formatYen, type CategoryBreakdown } from "@/lib/portfolio";
 
 export function HomeTab({
   goals,
-  snapshots,
+  portfolioBreakdown,
+  portfolioTotal,
+  portfolioAssetsMan,
   onGoToQuest,
   onGoToAchievements,
   onGoToAssets,
 }: {
   goals: Goal[];
-  snapshots: PortfolioSnapshot[];
+  portfolioBreakdown: CategoryBreakdown;
+  portfolioTotal: number;
+  portfolioAssetsMan: number | null;
   onGoToQuest: () => void;
   onGoToAchievements: () => void;
   onGoToAssets: () => void;
 }) {
   const [avatarOk, setAvatarOk] = useState(true);
-
-  const latest = latestSnapshot(snapshots);
-  const portfolioBreakdown = latest?.categories ?? emptyBreakdown();
-  const portfolioTotal = latest ? snapshotTotals(latest).totalYen : 0;
-  const portfolioAssetsMan = latest ? portfolioTotal / 10000 : null;
 
   const rank = playerRank(goals, portfolioAssetsMan);
   const unlockedCount = unlockedAchievements(goals, portfolioAssetsMan).length;
@@ -118,7 +111,7 @@ export function HomeTab({
             onClick={onGoToAssets}
             className="neon-text-pink font-mono text-xs underline underline-offset-2"
           >
-            {latest ? "記録・詳細を見る →" : "内訳を記録する →"}
+            {portfolioTotal > 0 ? "記録・詳細を見る →" : "内訳を記録する →"}
           </button>
         </div>
         <button
