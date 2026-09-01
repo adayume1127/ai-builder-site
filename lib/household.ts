@@ -142,6 +142,12 @@ export function removeTransaction(transactions: BudgetTransaction[], id: string)
   return transactions.filter((t) => t.id !== id);
 }
 
+// 既存の取引のカテゴリだけを変更する(例: 「特別費にする」)。新しい取引を追加するわけではないので、
+// 同じ支出が変更前後のカテゴリに二重計上されることはない。
+export function updateTransactionCategory(transactions: BudgetTransaction[], id: string, categoryId: string): BudgetTransaction[] {
+  return transactions.map((t) => (t.id === id ? { ...t, categoryId } : t));
+}
+
 export function monthKey(dateStr: string): string {
   return dateStr.slice(0, 7); // YYYY-MM
 }

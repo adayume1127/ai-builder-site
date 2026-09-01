@@ -13,6 +13,7 @@ import type { BudgetAdjustmentSuggestion } from "@/lib/budgetSuggestions";
 import { LunaCoach } from "../LunaCoach";
 import { MonthlyHistoryList } from "./MonthlyHistoryList";
 import { BudgetSuggestionCard } from "./BudgetSuggestionCard";
+import { SpecialReserveSuggestionCard } from "./SpecialReserveSuggestionCard";
 
 // remainingSpendableが、今月使ってよい総額(monthlySpendableBudget)のこの割合を下回ったら「少なくなってきた」と案内する。
 // spec上の明示的な閾値指定は無いため、独自の目安として採用。
@@ -61,9 +62,11 @@ export function HouseholdDashboard({
   month,
   monthlyHistoryEntries,
   budgetSuggestions,
+  specialReserveSuggestion,
   onEditBudget,
   onGoToDiagnosis,
   onAdoptBudgetSuggestion,
+  onAdoptSpecialReserve,
 }: {
   summary: HouseholdDashboardSummary;
   categories: BudgetCategory[];
@@ -71,9 +74,11 @@ export function HouseholdDashboard({
   month: string;
   monthlyHistoryEntries: MonthlyHistoryEntry[];
   budgetSuggestions: BudgetAdjustmentSuggestion[];
+  specialReserveSuggestion: { estimatedMonthlyReserve: number; annualTotal: number } | null;
   onEditBudget: () => void;
   onGoToDiagnosis: () => void;
   onAdoptBudgetSuggestion: (categoryId: string, budgetYen: number) => void;
+  onAdoptSpecialReserve: (newReserve: number) => void;
 }) {
   const variableBudgetStatuses = categoryBudgetStatusForMonth(transactions, categories, month).filter(
     (b) => categoryNature(b.category) === "variable"
@@ -223,6 +228,16 @@ export function HouseholdDashboard({
 
       {/* 5-4. 来月の予算のヒント(標準生活費学習・カテゴリ予算提案) */}
       <BudgetSuggestionCard suggestions={budgetSuggestions} onAdopt={onAdoptBudgetSuggestion} />
+
+      {/* 5-5. 特別費積立の見直し提案(特別費候補から学習した年間見込み) */}
+      {specialReserveSuggestion && (
+        <SpecialReserveSuggestionCard
+          estimatedMonthlyReserve={specialReserveSuggestion.estimatedMonthlyReserve}
+          annualTotal={specialReserveSuggestion.annualTotal}
+          currentReserve={summary.specialExpenseReserve}
+          onAdopt={onAdoptSpecialReserve}
+        />
+      )}
 
       {/* 6. 補助情報・導線 */}
       <div className="flex gap-2 font-mono text-xs">

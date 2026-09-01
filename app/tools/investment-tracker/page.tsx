@@ -10,6 +10,7 @@ import { BudgetPlanAdopt } from "@/components/investment-tracker/household/Budge
 import { DiagnosisResult } from "@/components/investment-tracker/household/DiagnosisResult";
 import { HouseholdDashboard } from "@/components/investment-tracker/household/HouseholdDashboard";
 import { HouseholdSetup } from "@/components/investment-tracker/household/HouseholdSetup";
+import { SpecialExpensePrompt } from "@/components/investment-tracker/household/SpecialExpensePrompt";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
 import {
@@ -39,6 +40,7 @@ import {
 import {
   addCategory,
   addTransaction,
+  categoryNature,
   loadCategories,
   loadHouseholdSettings,
   loadTransactions,
@@ -52,6 +54,7 @@ import {
   setCategoryBudget,
   setCategoryNature,
   totalNetYen,
+  updateTransactionCategory,
   type BudgetCategory,
   type BudgetCategoryKind,
   type BudgetTransaction,
@@ -82,6 +85,18 @@ import {
 } from "@/lib/monthlyBudget";
 import { completedMonths, loadMonthlyReviews, monthlyHistory, type MonthlyReview } from "@/lib/monthlyReview";
 import { suggestBudgetAdjustments } from "@/lib/budgetSuggestions";
+import {
+  addSpecialExpenseCandidate,
+  estimatedAnnualSpecialExpenses,
+  estimatedMonthlySpecialExpenseReserve,
+  findUnresolvedLargeExpenseCandidate,
+  loadResolvedSpecialExpensePromptIds,
+  loadSpecialExpenseCandidates,
+  saveResolvedSpecialExpensePromptIds,
+  saveSpecialExpenseCandidates,
+  type SpecialExpenseCandidate,
+  type SpecialExpenseCandidateRecurrence,
+} from "@/lib/specialExpenseDetection";
 
 export default function InvestmentTrackerPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -97,6 +112,8 @@ export default function InvestmentTrackerPage() {
   const [specialExpenseMode, setSpecialExpenseMode] = useState<SpecialExpenseMode>("unknown");
   const [monthlyBudgets, setMonthlyBudgets] = useState<MonthlyBudget[]>([]);
   const [monthlyReviews, setMonthlyReviews] = useState<MonthlyReview[]>([]);
+  const [specialExpenseCandidates, setSpecialExpenseCandidates] = useState<SpecialExpenseCandidate[]>([]);
+  const [resolvedPromptIds, setResolvedPromptIds] = useState<string[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
   const [showDiagnosisDetail, setShowDiagnosisDetail] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -118,6 +135,8 @@ export default function InvestmentTrackerPage() {
     setSpecialExpenseMode(loadHouseholdDiagnosisSettings().specialExpenseMode);
     setMonthlyBudgets(loadMonthlyBudgets());
     setMonthlyReviews(loadMonthlyReviews());
+    setSpecialExpenseCandidates(loadSpecialExpenseCandidates());
+    setResolvedPromptIds(loadResolvedSpecialExpensePromptIds());
     setLoaded(true);
   }, []);
 
@@ -211,6 +230,47 @@ export default function InvestmentTrackerPage() {
     }
   }
 
+  function handleAdoptSpecialReserve(newReserve: number) {
+    const month = monthKey(todayKey());
+    const current = getMonthlyBudget(monthlyBudgets, month);
+    if (!current) return;
+    const updated = { ...current, specialExpenseReserve: newReserve, updatedAt: new Date().toISOString() };
+    const next = upsertMonthlyBudget(monthlyBudgets, updated);
+    setMonthlyBudgets(next);
+    saveMonthlyBudgets(next);
+  }
+
+  // 大口支出プロンプトへの回答。「特別費にする」を選んだ場合のみ、
+  // (1)既存取引のカテゴリを特別費カテゴリへ変更(新規取引は作らない=二重計上防止)
+  // (2)将来の特別費見込みとしてSpecialExpenseCandidateを保存する。
+  // どちらの回答でも、年間特別費・MonthlyBudget・HouseholdProfileは自動変更しない。
+  function handleResolveSpecialExpensePrompt(
+    transaction: BudgetTransaction,
+    decision: "special" | "normal",
+    recurrence?: SpecialExpenseCandidateRecurrence
+  ) {
+    const nextResolved = [...resolvedPromptIds, transaction.id];
+    setResolvedPromptIds(nextResolved);
+    saveResolvedSpecialExpensePromptIds(nextResolved);
+
+    if (decision !== "special" || !recurrence) return;
+
+    const specialCategoryId = categories.find((c) => categoryNature(c) === "special")?.id ?? "special-expense";
+    const nextTransactions = updateTransactionCategory(transactions, transaction.id, specialCategoryId);
+    setTransactions(nextTransactions);
+    saveTransactions(nextTransactions);
+
+    const nextCandidates = addSpecialExpenseCandidate(specialExpenseCandidates, {
+      categoryId: transaction.categoryId,
+      amount: transaction.amount,
+      sourceTransactionId: transaction.id,
+      recurrence,
+      expectedMonth: Number(transaction.date.slice(5, 7)),
+    });
+    setSpecialExpenseCandidates(nextCandidates);
+    saveSpecialExpenseCandidates(nextCandidates);
+  }
+
   function handleCreate(input: NewGoalInput) {
     persist([...goals, createGoal(input)]);
     setFormMode({ type: "closed" });
@@ -246,6 +306,15 @@ export default function InvestmentTrackerPage() {
     : null;
   const currentMonthlyBudget = getMonthlyBudget(monthlyBudgets, nowMonth);
   const previousMonthlyBudget = latestMonthlyBudget(monthlyBudgets);
+  const pendingSpecialExpenseCandidate = findUnresolvedLargeExpenseCandidate(
+    transactions,
+    categories,
+    new Set(resolvedPromptIds),
+    nowMonth
+  );
+  const estimatedAnnualSpecial = estimatedAnnualSpecialExpenses(specialExpenseCandidates, specialExpenses);
+  const estimatedMonthlySpecial = estimatedMonthlySpecialExpenseReserve(estimatedAnnualSpecial);
+  const hasAnnualSpecialCandidate = specialExpenseCandidates.some((c) => c.recurrence === "annual");
   const householdNetYen = totalNetYen(transactions, categories);
   const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
   const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
@@ -327,6 +396,17 @@ export default function InvestmentTrackerPage() {
               />
             ) : (
               <div className="space-y-6">
+                {pendingSpecialExpenseCandidate && (
+                  <SpecialExpensePrompt
+                    transaction={pendingSpecialExpenseCandidate}
+                    categoryLabel={
+                      categories.find((c) => c.id === pendingSpecialExpenseCandidate.categoryId)?.label ?? "支出"
+                    }
+                    onResolve={(decision, recurrence) =>
+                      handleResolveSpecialExpensePrompt(pendingSpecialExpenseCandidate, decision, recurrence)
+                    }
+                  />
+                )}
                 <HouseholdDashboard
                   summary={buildHouseholdDashboardSummary(currentMonthlyBudget, transactions, categories)}
                   categories={categories}
@@ -334,9 +414,13 @@ export default function InvestmentTrackerPage() {
                   month={nowMonth}
                   monthlyHistoryEntries={monthlyHistory(transactions, categories, monthlyReviews)}
                   budgetSuggestions={suggestBudgetAdjustments(transactions, categories, completedMonths(transactions, categories))}
+                  specialReserveSuggestion={
+                    hasAnnualSpecialCandidate ? { estimatedMonthlyReserve: estimatedMonthlySpecial, annualTotal: estimatedAnnualSpecial } : null
+                  }
                   onEditBudget={() => setEditingBudget(true)}
                   onGoToDiagnosis={() => setShowDiagnosisDetail((v) => !v)}
                   onAdoptBudgetSuggestion={handleSetCategoryBudget}
+                  onAdoptSpecialReserve={handleAdoptSpecialReserve}
                 />
                 {showDiagnosisDetail && (
                   <div className="space-y-2 border-t border-white/10 pt-6">
