@@ -133,6 +133,19 @@ export function upsertMonthlyReview(reviews: MonthlyReview[], review: MonthlyRev
   return next;
 }
 
+// 保存済みレビューの割当合計(貯金へ+特別費へ)が、その後の取引編集・削除で再計算された
+// 最新のmonthlySurplusを上回っていないかを判定する。
+// 上回っている場合でも保存済みの割当額を自動でクランプ・変更してはいけない — 呼び出し側は
+// 「再確認が必要」な状態としてユーザーに警告を出し、ユーザー自身が金額を見直して再保存するまで
+// 過去の割当値をそのまま保持すること。
+export function reviewNeedsReconciliation(review: MonthlyReview | null, currentSurplus: number): boolean {
+  if (!review || review.reviewedAt === null) return false;
+  // 赤字/ゼロの月に割り当てられる上限は0円(マイナスの余剰金には割り当てられない)。
+  // 0円/0円まで見直した保存は「解消済み」とみなせるよう、比較対象を currentSurplus ではなく
+  // max(currentSurplus, 0) にする(MonthlyReviewCardのoverAllocated判定と同じ考え方)。
+  return review.allocatedToCashSavings + review.allocatedToSpecialReserve > Math.max(currentSurplus, 0);
+}
+
 // ===== 月次履歴(過去月の一覧) =====
 
 export type MonthlyHistoryEntry = {

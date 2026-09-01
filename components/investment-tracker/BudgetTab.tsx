@@ -62,6 +62,8 @@ export function BudgetTab({
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayKey());
   const [memo, setMemo] = useState("");
+  // 直前に追加した取引が投資(nature=investment)だったか。資産タブの評価額には自動反映されないことを注記するために使う。
+  const [lastAddedInvestment, setLastAddedInvestment] = useState(false);
   const byDate = transactionsByDate(transactions);
   const selectedDateTransactions = byDate.get(date) ?? [];
 
@@ -99,6 +101,8 @@ export function BudgetTab({
     const value = Number(amount);
     if (!categoryId || !Number.isFinite(value) || value <= 0 || !date) return;
     onAddTransaction({ date, categoryId, amount: value, memo });
+    const addedCategory = categories.find((c) => c.id === categoryId);
+    setLastAddedInvestment(addedCategory ? categoryNature(addedCategory) === "investment" : false);
     setAmount("");
     setMemo("");
   }
@@ -314,6 +318,11 @@ export function BudgetTab({
         <Button type="button" className="w-full" onClick={handleSubmit} disabled={!categoryId}>
           追加する
         </Button>
+        {lastAddedInvestment && (
+          <p className="rounded-lg border border-white/10 bg-white/[0.02] px-2.5 py-2 text-[11px] text-muted-foreground">
+            この取引は資産タブの投資評価額には自動反映されません。実際に投資したら資産タブでも金額を更新しましょう。
+          </p>
+        )}
       </div>
 
       <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">

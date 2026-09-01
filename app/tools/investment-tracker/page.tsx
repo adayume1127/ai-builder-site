@@ -10,6 +10,7 @@ import { BudgetPlanAdopt } from "@/components/investment-tracker/household/Budge
 import { DiagnosisResult } from "@/components/investment-tracker/household/DiagnosisResult";
 import { HouseholdDashboard } from "@/components/investment-tracker/household/HouseholdDashboard";
 import { HouseholdSetup } from "@/components/investment-tracker/household/HouseholdSetup";
+import { MonthlyReviewCard } from "@/components/investment-tracker/household/MonthlyReviewCard";
 import { SpecialExpensePrompt } from "@/components/investment-tracker/household/SpecialExpensePrompt";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
@@ -83,7 +84,21 @@ import {
   type MonthlyBudget,
   type RecommendedMonthlyBudget,
 } from "@/lib/monthlyBudget";
-import { completedMonths, loadMonthlyReviews, monthlyHistory, type MonthlyReview } from "@/lib/monthlyReview";
+import {
+  actualFixedExpenses,
+  actualIncome,
+  actualMonthlyInvestment,
+  actualSpecialExpenses,
+  actualVariableExpenses,
+  completedMonths,
+  getMonthlyReview,
+  loadMonthlyReviews,
+  monthlyHistory,
+  monthlySurplus,
+  saveMonthlyReviews,
+  upsertMonthlyReview,
+  type MonthlyReview,
+} from "@/lib/monthlyReview";
 import { suggestBudgetAdjustments } from "@/lib/budgetSuggestions";
 import {
   addSpecialExpenseCandidate,
@@ -271,6 +286,20 @@ export default function InvestmentTrackerPage() {
     saveSpecialExpenseCandidates(nextCandidates);
   }
 
+  // 月末レビューの割り当て保存。allocatedToCashSavings/allocatedToSpecialReserveは「用途ラベル」であり、
+  // 預金残高(資産タブの「預金」)はここでは一切変更しない。monthlySurplusはすでに家計簿の実績取引から
+  // 自動計算され、既に預金残高に反映済みのため、ここで残高へ再度加算すると二重計上になる。
+  function handleSaveMonthlyReviewAllocation(month: string, allocatedToCashSavings: number, allocatedToSpecialReserve: number) {
+    const next = upsertMonthlyReview(monthlyReviews, {
+      month,
+      allocatedToCashSavings,
+      allocatedToSpecialReserve,
+      reviewedAt: new Date().toISOString(),
+    });
+    setMonthlyReviews(next);
+    saveMonthlyReviews(next);
+  }
+
   function handleCreate(input: NewGoalInput) {
     persist([...goals, createGoal(input)]);
     setFormMode({ type: "closed" });
@@ -315,6 +344,13 @@ export default function InvestmentTrackerPage() {
   const estimatedAnnualSpecial = estimatedAnnualSpecialExpenses(specialExpenseCandidates, specialExpenses);
   const estimatedMonthlySpecial = estimatedMonthlySpecialExpenseReserve(estimatedAnnualSpecial);
   const hasAnnualSpecialCandidate = specialExpenseCandidates.some((c) => c.recurrence === "annual");
+
+  // 月末レビューの対象月: 今月より前で、実績が十分にある直近の月(=先月)。
+  const completedMonthsDesc = completedMonths(transactions, categories);
+  const reviewTargetMonth = completedMonthsDesc.find((m) => m !== nowMonth) ?? null;
+  const reviewTargetIndex = reviewTargetMonth ? completedMonthsDesc.indexOf(reviewTargetMonth) : -1;
+  const previousReviewMonth = reviewTargetIndex >= 0 ? completedMonthsDesc[reviewTargetIndex + 1] ?? null : null;
+  const reviewTargetBudget = reviewTargetMonth ? getMonthlyBudget(monthlyBudgets, reviewTargetMonth) : null;
   const householdNetYen = totalNetYen(transactions, categories);
   const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
   const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
@@ -422,6 +458,22 @@ export default function InvestmentTrackerPage() {
                   onAdoptBudgetSuggestion={handleSetCategoryBudget}
                   onAdoptSpecialReserve={handleAdoptSpecialReserve}
                 />
+                {reviewTargetMonth && (
+                  <MonthlyReviewCard
+                    month={reviewTargetMonth}
+                    actualIncome={actualIncome(transactions, categories, reviewTargetMonth)}
+                    actualFixedExpenses={actualFixedExpenses(transactions, categories, reviewTargetMonth)}
+                    actualVariableExpenses={actualVariableExpenses(transactions, categories, reviewTargetMonth)}
+                    actualSpecialExpenses={actualSpecialExpenses(transactions, categories, reviewTargetMonth)}
+                    actualMonthlyInvestment={actualMonthlyInvestment(transactions, categories, reviewTargetMonth)}
+                    monthlySurplus={monthlySurplus(transactions, categories, reviewTargetMonth)}
+                    plannedCashSavings={reviewTargetBudget?.plannedCashSavings ?? 0}
+                    plannedInvestment={reviewTargetBudget?.plannedInvestment ?? 0}
+                    previousMonthSurplus={previousReviewMonth ? monthlySurplus(transactions, categories, previousReviewMonth) : null}
+                    review={getMonthlyReview(monthlyReviews, reviewTargetMonth)}
+                    onSaveAllocation={(cash, special) => handleSaveMonthlyReviewAllocation(reviewTargetMonth, cash, special)}
+                  />
+                )}
                 {showDiagnosisDetail && (
                   <div className="space-y-2 border-t border-white/10 pt-6">
                     <button
