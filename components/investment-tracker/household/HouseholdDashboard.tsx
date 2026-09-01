@@ -7,12 +7,28 @@ import {
   type BudgetCategory,
   type BudgetTransaction,
 } from "@/lib/household";
-import type { HouseholdDashboardSummary } from "@/lib/monthlyBudget";
+import type { HouseholdDashboardSummary, SpendingPaceStatus } from "@/lib/monthlyBudget";
+import type { MonthlyHistoryEntry } from "@/lib/monthlyReview";
 import { LunaCoach } from "../LunaCoach";
+import { MonthlyHistoryList } from "./MonthlyHistoryList";
 
 // remainingSpendableが、今月使ってよい総額(monthlySpendableBudget)のこの割合を下回ったら「少なくなってきた」と案内する。
 // spec上の明示的な閾値指定は無いため、独自の目安として採用。
 const LOW_REMAINING_RATE = 0.15;
+
+const PACE_LABEL: Record<SpendingPaceStatus, string> = {
+  early_month: "月初はまだ様子見",
+  under_pace: "余裕のあるペース",
+  on_pace: "標準的なペース",
+  over_pace: "やや速いペース",
+};
+
+const PACE_MESSAGE: Record<SpendingPaceStatus, string> = {
+  early_month: "月初はペースが安定しないよ。数日たったらまた見てみよう。",
+  under_pace: "月の進みに対して支出は控えめ。今月は余裕を残せそう。",
+  on_pace: "月の進みと支出のペースはだいたい同じくらいだよ。",
+  over_pace: "月の進みより支出のペースが少し速いよ。残りの日数を意識してみよう。",
+};
 
 function lunaDashboardMessage(summary: HouseholdDashboardSummary, overBudgetCategoryCount: number): { variant: "watch" | "cheer" | "celebrate"; message: string } {
   if (summary.remainingSpendable < 0) {
@@ -41,6 +57,7 @@ export function HouseholdDashboard({
   categories,
   transactions,
   month,
+  monthlyHistoryEntries,
   onEditBudget,
   onGoToDiagnosis,
 }: {
@@ -48,6 +65,7 @@ export function HouseholdDashboard({
   categories: BudgetCategory[];
   transactions: BudgetTransaction[];
   month: string;
+  monthlyHistoryEntries: MonthlyHistoryEntry[];
   onEditBudget: () => void;
   onGoToDiagnosis: () => void;
 }) {
@@ -174,6 +192,28 @@ export function HouseholdDashboard({
           })}
         </div>
       )}
+
+      {/* 5-2. 今月の予算ペース */}
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono">
+        <div className="flex items-center justify-between text-xs">
+          <h3 className="text-muted-foreground">今月の予算ペース</h3>
+          <span className="text-muted-foreground">{PACE_LABEL[summary.spendingPace]}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div>
+            <p className="text-[10px] text-muted-foreground">予算使用率</p>
+            <p className="text-base font-bold">{Math.round(summary.budgetUsageRate * 100)}%</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">月の進行</p>
+            <p className="text-base font-bold">{Math.round(summary.monthProgressRate * 100)}%</p>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground">{PACE_MESSAGE[summary.spendingPace]}</p>
+      </div>
+
+      {/* 5-3. 過去の実績 */}
+      <MonthlyHistoryList entries={monthlyHistoryEntries} />
 
       {/* 6. 補助情報・導線 */}
       <div className="flex gap-2 font-mono text-xs">

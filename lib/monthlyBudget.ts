@@ -9,6 +9,7 @@ import {
   categoryTotalsForMonth,
   type BudgetCategory,
   type BudgetTransaction,
+  type ExpenseNature,
 } from "@/lib/household";
 import {
   availableForSavings,
@@ -49,6 +50,7 @@ export type HouseholdDashboardSummary = {
   remainingSpecialExpenseReserve: number;
   budgetUsageRate: number;
   monthProgressRate: number;
+  spendingPace: SpendingPaceStatus;
   projectedMonthEndBalance: number;
 };
 
@@ -113,11 +115,12 @@ export function calculateMonthlySpendableBudget(budget: MonthlyBudget): number {
   );
 }
 
-function sumByNature(
+// nature別の支出合計(月次)。lib/monthlyReview.tsからも実績集計の基礎関数として再利用する。
+export function sumExpenseByNature(
   transactions: BudgetTransaction[],
   categories: BudgetCategory[],
   month: string,
-  nature: "variable" | "special"
+  nature: ExpenseNature
 ): number {
   const totals = categoryTotalsForMonth(transactions, categories, month);
   return totals
@@ -131,7 +134,7 @@ export function calculateActualFlexibleSpending(
   categories: BudgetCategory[],
   month: string
 ): number {
-  return sumByNature(transactions, categories, month, "variable");
+  return sumExpenseByNature(transactions, categories, month, "variable");
 }
 
 // 今月の実績のうち、特別費(nature="special")の支出合計。
@@ -140,7 +143,7 @@ export function calculateActualSpecialExpenses(
   categories: BudgetCategory[],
   month: string
 ): number {
-  return sumByNature(transactions, categories, month, "special");
+  return sumExpenseByNature(transactions, categories, month, "special");
 }
 
 // 特別費の確保額を超えた分だけを返す(確保額の範囲内なら0 = 通常の生活費を圧迫しない)
@@ -172,6 +175,26 @@ export function calculateProjectedMonthEndBalance(remainingSpendable: number): n
   return remainingSpendable;
 }
 
+// ===== 支出ペース(Phase5) =====
+
+export type SpendingPaceStatus = "early_month" | "under_pace" | "on_pace" | "over_pace";
+
+// 月初はbudgetUsageRateの分母・分子どちらも小さく比率が極端に振れやすいため、強い判定を出さない。
+const PACE_EARLY_MONTH_DAY_THRESHOLD = 5;
+// budgetUsageRate - monthProgressRateがこの値を超えたら「やや速い」、下回ったら「余裕あり」と判定する。
+const PACE_DIFFERENCE_THRESHOLD = 0.1;
+
+// 予算消化率(budgetUsageRate)と月の進行率(monthProgressRate)を比較し、支出ペースを判定する。
+// 例: 月が70%進んでいるのに予算は52%しか使っていない場合 → under_pace(余裕あり)
+export function calculateSpendingPace(budgetUsageRate: number, monthProgressRate: number, today: Date = new Date()): SpendingPaceStatus {
+  if (today.getDate() <= PACE_EARLY_MONTH_DAY_THRESHOLD) return "early_month";
+  // 浮動小数点誤差(例: 0.6 - 0.5 が 0.1 ちょうどにならない)でしきい値判定がぶれないよう丸める
+  const diff = Math.round((budgetUsageRate - monthProgressRate) * 1e6) / 1e6;
+  if (diff <= -PACE_DIFFERENCE_THRESHOLD) return "under_pace";
+  if (diff >= PACE_DIFFERENCE_THRESHOLD) return "over_pace";
+  return "on_pace";
+}
+
 // 変動費カテゴリ(nature="variable")に設定されている月間予算の合計。budgetUsageRateの分母に使う。
 export function totalFlexibleBudget(categories: BudgetCategory[]): number {
   return categories
@@ -193,6 +216,7 @@ export function buildHouseholdDashboardSummary(
   const remainingSpendable = calculateRemainingSpendable(monthlySpendableBudget, actualFlexibleSpending, specialExpenseOverage);
   const budgetUsageRate = calculateBudgetUsageRate(actualFlexibleSpending, totalFlexibleBudget(categories));
   const monthProgressRate = calculateMonthProgressRate(today);
+  const spendingPace = calculateSpendingPace(budgetUsageRate, monthProgressRate, today);
   const projectedMonthEndBalance = calculateProjectedMonthEndBalance(remainingSpendable);
 
   return {
@@ -207,6 +231,7 @@ export function buildHouseholdDashboardSummary(
     remainingSpecialExpenseReserve: budget.specialExpenseReserve - actualSpecialExpenses,
     budgetUsageRate,
     monthProgressRate,
+    spendingPace,
     projectedMonthEndBalance,
   };
 }

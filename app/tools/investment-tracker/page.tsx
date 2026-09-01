@@ -80,6 +80,7 @@ import {
   type MonthlyBudget,
   type RecommendedMonthlyBudget,
 } from "@/lib/monthlyBudget";
+import { loadMonthlyReviews, monthlyHistory, type MonthlyReview } from "@/lib/monthlyReview";
 
 export default function InvestmentTrackerPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -94,6 +95,7 @@ export default function InvestmentTrackerPage() {
   const [specialExpenses, setSpecialExpenses] = useState<SpecialExpense[]>([]);
   const [specialExpenseMode, setSpecialExpenseMode] = useState<SpecialExpenseMode>("unknown");
   const [monthlyBudgets, setMonthlyBudgets] = useState<MonthlyBudget[]>([]);
+  const [monthlyReviews, setMonthlyReviews] = useState<MonthlyReview[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
   const [showDiagnosisDetail, setShowDiagnosisDetail] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -114,6 +116,7 @@ export default function InvestmentTrackerPage() {
     setSpecialExpenses(loadSpecialExpenses());
     setSpecialExpenseMode(loadHouseholdDiagnosisSettings().specialExpenseMode);
     setMonthlyBudgets(loadMonthlyBudgets());
+    setMonthlyReviews(loadMonthlyReviews());
     setLoaded(true);
   }, []);
 
@@ -328,6 +331,7 @@ export default function InvestmentTrackerPage() {
                   categories={categories}
                   transactions={transactions}
                   month={nowMonth}
+                  monthlyHistoryEntries={monthlyHistory(transactions, categories, monthlyReviews)}
                   onEditBudget={() => setEditingBudget(true)}
                   onGoToDiagnosis={() => setShowDiagnosisDetail((v) => !v)}
                 />

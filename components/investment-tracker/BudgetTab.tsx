@@ -356,11 +356,13 @@ export function BudgetTab({
                     value={budgetInputs[c.id] ?? ""}
                     onChange={(e) => setBudgetInputs((prev) => ({ ...prev, [c.id]: e.target.value }))}
                     placeholder="予算(円・任意)"
+                    aria-label={`${c.label}の予算`}
                     className={`${inputClass} py-1 text-xs`}
                   />
                   <button
                     type="button"
                     onClick={() => handleSaveBudget(c.id)}
+                    aria-label={`${c.label}の予算を設定`}
                     className="shrink-0 rounded-lg border border-white/15 px-2 py-1 font-mono text-[11px] text-muted-foreground hover:bg-white/5"
                   >
                     設定
