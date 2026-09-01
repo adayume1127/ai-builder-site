@@ -11,6 +11,7 @@ import { DiagnosisResult } from "@/components/investment-tracker/household/Diagn
 import { HouseholdDashboard } from "@/components/investment-tracker/household/HouseholdDashboard";
 import { HouseholdSetup } from "@/components/investment-tracker/household/HouseholdSetup";
 import { MonthlyReviewCard } from "@/components/investment-tracker/household/MonthlyReviewCard";
+import { ReDiagnosisReflectChoice } from "@/components/investment-tracker/household/ReDiagnosisReflectChoice";
 import { SpecialExpensePrompt } from "@/components/investment-tracker/household/SpecialExpensePrompt";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
@@ -131,6 +132,12 @@ export default function InvestmentTrackerPage() {
   const [resolvedPromptIds, setResolvedPromptIds] = useState<string[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
   const [showDiagnosisDetail, setShowDiagnosisDetail] = useState(false);
+  const [reDiagnosing, setReDiagnosing] = useState(false);
+  const [pendingReDiagnosis, setPendingReDiagnosis] = useState<{
+    profile: HouseholdProfile;
+    items: SpecialExpense[];
+    mode: SpecialExpenseMode;
+  } | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TabKey>("home");
@@ -229,6 +236,31 @@ export default function InvestmentTrackerPage() {
     saveHouseholdProfile(profile);
     saveSpecialExpenses(items);
     saveHouseholdDiagnosisSettings({ specialExpenseMode: mode });
+  }
+
+  // 再診断ウィザードが完了した直後。ここではまだ何も保存しない — 今月の予算に反映するかどうかを
+  // ユーザーに選ばせてから(handleReflectReDiagnosis)保存する。
+  function handleFinishReDiagnosisWizard(profile: HouseholdProfile, items: SpecialExpense[], mode: SpecialExpenseMode) {
+    setPendingReDiagnosis({ profile, items, mode });
+  }
+
+  // 「今月にも反映する/来月から反映する」の選択結果。いずれの場合もHouseholdProfileは保存するが、
+  // 今月のMonthlyBudgetは reflectThisMonth を選んだ場合のみ新しい診断内容で作り直す(spec: 月替わり処理と同様、
+  // ユーザーが選ばない限り進行中のMonthlyBudgetを自動変更しない)。
+  function handleReflectReDiagnosis(reflectThisMonth: boolean) {
+    if (!pendingReDiagnosis) return;
+    const { profile, items, mode } = pendingReDiagnosis;
+    handleCompleteDiagnosis(profile, items, mode);
+    if (reflectThisMonth) {
+      const recommended = recommendMonthlyBudget(profile, items, mode);
+      const month = monthKey(todayKey());
+      const next = upsertMonthlyBudget(monthlyBudgets, createMonthlyBudget(recommended, month));
+      setMonthlyBudgets(next);
+      saveMonthlyBudgets(next);
+    }
+    setPendingReDiagnosis(null);
+    setReDiagnosing(false);
+    setShowDiagnosisDetail(false);
   }
 
   function handleAdoptMonthlyBudget(values: RecommendedMonthlyBudget) {
@@ -423,6 +455,23 @@ export default function InvestmentTrackerPage() {
           ) : activeTab === "budget" ? (
             !householdProfile || !recommendedMonthlyBudget ? (
               <HouseholdSetup onComplete={handleCompleteDiagnosis} />
+            ) : reDiagnosing || pendingReDiagnosis ? (
+              pendingReDiagnosis ? (
+                <ReDiagnosisReflectChoice
+                  onReflectThisMonth={() => handleReflectReDiagnosis(true)}
+                  onReflectNextMonthOnly={() => handleReflectReDiagnosis(false)}
+                />
+              ) : (
+                <HouseholdSetup
+                  mode="edit"
+                  initialProfile={householdProfile}
+                  initialSpecialExpenses={specialExpenses}
+                  initialSpecialExpenseMode={specialExpenseMode}
+                  currentCashBalanceYen={cashCategory.currentValueYen}
+                  onComplete={handleFinishReDiagnosisWizard}
+                  onCancel={() => setReDiagnosing(false)}
+                />
+              )
             ) : !currentMonthlyBudget || editingBudget ? (
               <BudgetPlanAdopt
                 variant={editingBudget ? "edit" : monthlyBudgets.length === 0 ? "initial" : "rollover"}
@@ -476,13 +525,22 @@ export default function InvestmentTrackerPage() {
                 )}
                 {showDiagnosisDetail && (
                   <div className="space-y-2 border-t border-white/10 pt-6">
-                    <button
-                      type="button"
-                      onClick={() => setShowDiagnosisDetail(false)}
-                      className="font-mono text-xs text-muted-foreground underline"
-                    >
-                      閉じる ▲
-                    </button>
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setShowDiagnosisDetail(false)}
+                        className="font-mono text-xs text-muted-foreground underline"
+                      >
+                        閉じる ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReDiagnosing(true)}
+                        className="rounded-lg border border-white/15 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:bg-white/5"
+                      >
+                        診断を見直す
+                      </button>
+                    </div>
                     <DiagnosisResult
                       profile={householdProfile}
                       specialExpenses={specialExpenses}

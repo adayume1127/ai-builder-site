@@ -132,9 +132,9 @@ export function HouseholdDashboard({
 
       {/* 3-2. 特別費: 確保額に対する使用状況(確保額の範囲内なら生活費を圧迫しない、超過分だけ影響する) */}
       <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">特別費(旅行・帰省など)</span>
-          <span className="text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs">
+          <span className="shrink-0 text-muted-foreground">特別費(旅行・帰省など)</span>
+          <span className="shrink-0 text-muted-foreground">
             使用済み {formatYen(summary.actualSpecialExpenses)} / 確保額 {formatYen(summary.specialExpenseReserve)}
           </span>
         </div>

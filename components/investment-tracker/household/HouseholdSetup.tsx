@@ -28,17 +28,47 @@ const STEP_LABELS: Record<WizardStep, string> = {
 };
 
 export function HouseholdSetup({
+  mode = "create",
+  initialProfile,
+  initialSpecialExpenses,
+  initialSpecialExpenseMode,
+  currentCashBalanceYen,
   onComplete,
+  onCancel,
 }: {
+  mode?: "create" | "edit";
+  initialProfile?: HouseholdProfile;
+  initialSpecialExpenses?: SpecialExpense[];
+  initialSpecialExpenseMode?: SpecialExpenseMode;
+  // edit時のみ使用。「現在の現金貯金」欄の初期値を資産タブの預金残高(実績ベース)で上書きする。
+  // ユーザーは表示された値を手動で上書きできる。
+  currentCashBalanceYen?: number;
   onComplete: (profile: HouseholdProfile, specialExpenses: SpecialExpense[], specialExpenseMode: SpecialExpenseMode) => void;
+  onCancel?: () => void;
 }) {
   const [step, setStep] = useState<WizardStep>(1);
-  const [profile, setProfile] = useState<HouseholdProfile>(createEmptyHouseholdProfile());
-  const [specialExpenses, setSpecialExpenses] = useState<SpecialExpense[]>([]);
-  const [specialExpenseMode, setSpecialExpenseMode] = useState<SpecialExpenseMode>("unknown");
+  const [profile, setProfile] = useState<HouseholdProfile>(() => {
+    if (mode === "edit" && initialProfile) {
+      const savings =
+        currentCashBalanceYen !== undefined
+          ? { ...initialProfile.savings, cashSavingsBalance: Math.max(0, currentCashBalanceYen) }
+          : initialProfile.savings;
+      return { ...initialProfile, savings };
+    }
+    return createEmptyHouseholdProfile();
+  });
+  const [specialExpenses, setSpecialExpenses] = useState<SpecialExpense[]>(
+    mode === "edit" ? (initialSpecialExpenses ?? []) : []
+  );
+  const [specialExpenseMode, setSpecialExpenseMode] = useState<SpecialExpenseMode>(
+    mode === "edit" ? (initialSpecialExpenseMode ?? "unknown") : "unknown"
+  );
 
   const coachMessage: Record<WizardStep, string> = {
-    1: "はじめまして！まずはあなたの収入を教えてね。難しく考えなくて大丈夫だよ。",
+    1:
+      mode === "edit"
+        ? "収入に変わったところがあれば教えてね。前回と同じなら、そのまま次へ進んでOKだよ。"
+        : "はじめまして！まずはあなたの収入を教えてね。難しく考えなくて大丈夫だよ。",
     2: "次は毎月かかる固定費を教えてね。分からない項目は0円のままでOK。",
     3: "生活費はどのくらい把握してる？分からなくても診断は進められるから安心してね。",
     4: "今の貯金や投資の状況を教えてね。",
@@ -63,10 +93,15 @@ export function HouseholdSetup({
   return (
     <div className="space-y-5">
       <div className="text-center space-y-1">
-        <h2 className="neon-text text-xl font-bold font-mono">家計診断</h2>
+        <h2 className="neon-text text-xl font-bold font-mono">{mode === "edit" ? "家計診断を見直す" : "家計診断"}</h2>
         <p className="font-mono text-xs text-muted-foreground">
           STEP {step}/6 — {STEP_LABELS[step]}
         </p>
+        {mode === "edit" && onCancel && (
+          <button type="button" onClick={onCancel} className="font-mono text-xs text-muted-foreground underline">
+            見直しをやめる
+          </button>
+        )}
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[oklch(0.85_0.22_195)] to-[oklch(0.85_0.22_330)] transition-[width] duration-500"
