@@ -80,7 +80,8 @@ import {
   type MonthlyBudget,
   type RecommendedMonthlyBudget,
 } from "@/lib/monthlyBudget";
-import { loadMonthlyReviews, monthlyHistory, type MonthlyReview } from "@/lib/monthlyReview";
+import { completedMonths, loadMonthlyReviews, monthlyHistory, type MonthlyReview } from "@/lib/monthlyReview";
+import { suggestBudgetAdjustments } from "@/lib/budgetSuggestions";
 
 export default function InvestmentTrackerPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -332,8 +333,10 @@ export default function InvestmentTrackerPage() {
                   transactions={transactions}
                   month={nowMonth}
                   monthlyHistoryEntries={monthlyHistory(transactions, categories, monthlyReviews)}
+                  budgetSuggestions={suggestBudgetAdjustments(transactions, categories, completedMonths(transactions, categories))}
                   onEditBudget={() => setEditingBudget(true)}
                   onGoToDiagnosis={() => setShowDiagnosisDetail((v) => !v)}
+                  onAdoptBudgetSuggestion={handleSetCategoryBudget}
                 />
                 {showDiagnosisDetail && (
                   <div className="space-y-2 border-t border-white/10 pt-6">

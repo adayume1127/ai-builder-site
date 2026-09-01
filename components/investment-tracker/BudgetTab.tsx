@@ -69,11 +69,10 @@ export function BudgetTab({
   const [newCategoryKind, setNewCategoryKind] = useState<BudgetCategoryKind>("expense");
 
   const [savingsGoalInput, setSavingsGoalInput] = useState(savingsGoalYen ? String(savingsGoalYen) : "");
-  const [budgetInputs, setBudgetInputs] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      categories.filter((c) => c.kind === "expense").map((c) => [c.id, c.monthlyBudgetYen ? String(c.monthlyBudgetYen) : ""])
-    )
-  );
+  // ユーザーが今まさに入力中の値だけを保持する(未編集のカテゴリは常にcategories側の最新値を表示する)。
+  // これにより、BudgetSuggestionCardの「採用」など他の操作でmonthlyBudgetYenが変わった場合も
+  // ここの表示が古いままにならない。
+  const [budgetInputOverrides, setBudgetInputOverrides] = useState<Record<string, string>>({});
 
   const summaries = monthlySummaries(transactions, categories);
   const trend = cumulativeSavingsTrend(summaries);
@@ -115,8 +114,13 @@ export function BudgetTab({
     onSaveSavingsGoal(Number(savingsGoalInput) || 0);
   }
 
-  function handleSaveBudget(categoryId: string) {
-    onSetCategoryBudget(categoryId, Number(budgetInputs[categoryId]) || 0);
+  function handleSaveBudget(categoryId: string, displayedValue: string) {
+    onSetCategoryBudget(categoryId, Number(displayedValue) || 0);
+    setBudgetInputOverrides((prev) => {
+      const next = { ...prev };
+      delete next[categoryId];
+      return next;
+    });
   }
 
   return (
@@ -353,15 +357,17 @@ export function BudgetTab({
                   <input
                     type="number"
                     inputMode="decimal"
-                    value={budgetInputs[c.id] ?? ""}
-                    onChange={(e) => setBudgetInputs((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                    value={budgetInputOverrides[c.id] ?? (c.monthlyBudgetYen ? String(c.monthlyBudgetYen) : "")}
+                    onChange={(e) => setBudgetInputOverrides((prev) => ({ ...prev, [c.id]: e.target.value }))}
                     placeholder="予算(円・任意)"
                     aria-label={`${c.label}の予算`}
                     className={`${inputClass} py-1 text-xs`}
                   />
                   <button
                     type="button"
-                    onClick={() => handleSaveBudget(c.id)}
+                    onClick={() =>
+                      handleSaveBudget(c.id, budgetInputOverrides[c.id] ?? (c.monthlyBudgetYen ? String(c.monthlyBudgetYen) : "0"))
+                    }
                     aria-label={`${c.label}の予算を設定`}
                     className="shrink-0 rounded-lg border border-white/15 px-2 py-1 font-mono text-[11px] text-muted-foreground hover:bg-white/5"
                   >
