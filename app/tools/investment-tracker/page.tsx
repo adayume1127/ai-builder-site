@@ -50,10 +50,12 @@ import {
   saveHouseholdSettings,
   saveTransactions,
   setCategoryBudget,
+  setCategoryNature,
   totalNetYen,
   type BudgetCategory,
   type BudgetCategoryKind,
   type BudgetTransaction,
+  type ExpenseNature,
 } from "@/lib/household";
 import {
   loadHouseholdDiagnosisSettings,
@@ -172,6 +174,12 @@ export default function InvestmentTrackerPage() {
 
   function handleSetCategoryBudget(id: string, budgetYen: number) {
     const next = setCategoryBudget(categories, id, budgetYen);
+    setCategories(next);
+    saveCategories(next);
+  }
+
+  function handleSetCategoryNature(id: string, nature: ExpenseNature) {
+    const next = setCategoryNature(categories, id, nature);
     setCategories(next);
     saveCategories(next);
   }
@@ -308,7 +316,7 @@ export default function InvestmentTrackerPage() {
               <HouseholdSetup onComplete={handleCompleteDiagnosis} />
             ) : !currentMonthlyBudget || editingBudget ? (
               <BudgetPlanAdopt
-                variant={monthlyBudgets.length === 0 ? "initial" : "rollover"}
+                variant={editingBudget ? "edit" : monthlyBudgets.length === 0 ? "initial" : "rollover"}
                 diagnosisRecommendation={recommendedMonthlyBudget}
                 previousBudget={editingBudget ? currentMonthlyBudget : previousMonthlyBudget}
                 onAdopt={handleAdoptMonthlyBudget}
@@ -351,6 +359,7 @@ export default function InvestmentTrackerPage() {
                     onDeleteCategory={handleDeleteCategory}
                     onSaveSavingsGoal={handleSaveSavingsGoal}
                     onSetCategoryBudget={handleSetCategoryBudget}
+                    onSetCategoryNature={handleSetCategoryNature}
                   />
                 </div>
               </div>

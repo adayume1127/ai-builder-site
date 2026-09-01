@@ -8,6 +8,7 @@ import { todayKey, formatYen } from "@/lib/portfolio";
 import {
   addCategory,
   categoryBudgetStatusForMonth,
+  categoryNature,
   cumulativeSavingsTrend,
   monthKey,
   monthlySummaries,
@@ -15,10 +16,19 @@ import {
   type BudgetCategory,
   type BudgetCategoryKind,
   type BudgetTransaction,
+  type ExpenseNature,
 } from "@/lib/household";
 
 const inputClass =
   "w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]";
+
+const NATURE_LABELS: Record<ExpenseNature, string> = {
+  fixed: "固定費",
+  variable: "変動費",
+  special: "特別費",
+  savings: "貯金",
+  investment: "投資",
+};
 
 export function BudgetTab({
   categories,
@@ -30,6 +40,7 @@ export function BudgetTab({
   onDeleteCategory,
   onSaveSavingsGoal,
   onSetCategoryBudget,
+  onSetCategoryNature,
 }: {
   categories: BudgetCategory[];
   transactions: BudgetTransaction[];
@@ -40,6 +51,7 @@ export function BudgetTab({
   onDeleteCategory: (id: string) => void;
   onSaveSavingsGoal: (value: number) => void;
   onSetCategoryBudget: (id: string, budgetYen: number) => void;
+  onSetCategoryNature: (id: string, nature: ExpenseNature) => void;
 }) {
   const [kind, setKind] = useState<BudgetCategoryKind>("expense");
   const expenseCategories = categories.filter((c) => c.kind === "expense");
@@ -304,38 +316,56 @@ export function BudgetTab({
         <h3 className="font-mono text-sm text-muted-foreground">カテゴリ管理</h3>
 
         <div className="space-y-2">
-          <p className="text-[10px] text-muted-foreground">支出(月間予算を設定すると超過時に警告表示されます)</p>
-          <div className="space-y-1.5">
+          <p className="text-[10px] text-muted-foreground">
+            支出(分類は「今月あと使えるお金」の計算に使われます。予算を設定すると超過時に警告表示されます)
+          </p>
+          <div className="space-y-2">
             {expenseCategories.map((c) => (
-              <div key={c.id} className="flex items-center gap-1.5">
-                <span className="flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2 py-1 font-mono text-[11px] whitespace-nowrap">
-                  {c.label}
-                  {!c.isDefault && (
-                    <button
-                      type="button"
-                      onClick={() => onDeleteCategory(c.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                      aria-label={`${c.label}を削除`}
-                    >
-                      ×
-                    </button>
-                  )}
-                </span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={budgetInputs[c.id] ?? ""}
-                  onChange={(e) => setBudgetInputs((prev) => ({ ...prev, [c.id]: e.target.value }))}
-                  placeholder="予算(円・任意)"
-                  className={`${inputClass} py-1 text-xs`}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSaveBudget(c.id)}
-                  className="shrink-0 rounded-lg border border-white/15 px-2 py-1 font-mono text-[11px] text-muted-foreground hover:bg-white/5"
-                >
-                  設定
-                </button>
+              <div key={c.id} className="space-y-1 rounded-lg border border-white/10 bg-white/[0.02] p-1.5">
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2 py-1 font-mono text-[11px] whitespace-nowrap">
+                    {c.label}
+                    {!c.isDefault && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteCategory(c.id)}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label={`${c.label}を削除`}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </span>
+                  <select
+                    value={categoryNature(c)}
+                    onChange={(e) => onSetCategoryNature(c.id, e.target.value as ExpenseNature)}
+                    className={`${inputClass} w-24 shrink-0 py-1 text-[11px]`}
+                    aria-label={`${c.label}の分類`}
+                  >
+                    {(Object.keys(NATURE_LABELS) as ExpenseNature[]).map((n) => (
+                      <option key={n} value={n}>
+                        {NATURE_LABELS[n]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={budgetInputs[c.id] ?? ""}
+                    onChange={(e) => setBudgetInputs((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                    placeholder="予算(円・任意)"
+                    className={`${inputClass} py-1 text-xs`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSaveBudget(c.id)}
+                    className="shrink-0 rounded-lg border border-white/15 px-2 py-1 font-mono text-[11px] text-muted-foreground hover:bg-white/5"
+                  >
+                    設定
+                  </button>
+                </div>
               </div>
             ))}
           </div>

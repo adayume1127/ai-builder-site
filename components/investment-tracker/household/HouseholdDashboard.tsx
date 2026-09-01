@@ -89,8 +89,8 @@ export function HouseholdDashboard({
         </span>
       </div>
 
-      {/* 3. 貯金予定・投資予定・特別費 */}
-      <div className="grid grid-cols-3 gap-2 text-center font-mono">
+      {/* 3. 貯金予定・投資予定 */}
+      <div className="grid grid-cols-2 gap-2 text-center font-mono">
         <div className="rounded-lg border border-white/15 bg-white/5 p-2">
           <p className="text-[10px] text-muted-foreground">現金貯金の予定</p>
           <p className="neon-text text-sm font-bold">{formatYen(summary.plannedCashSavings)}</p>
@@ -99,14 +99,35 @@ export function HouseholdDashboard({
           <p className="text-[10px] text-muted-foreground">投資の予定</p>
           <p className="neon-text text-sm font-bold">{formatYen(summary.plannedInvestment)}</p>
         </div>
-        <div className="rounded-lg border border-white/15 bg-white/5 p-2">
-          <p className="text-[10px] text-muted-foreground">特別費 残り</p>
-          <p className={`text-sm font-bold ${summary.remainingSpecialExpenseReserve >= 0 ? "text-foreground" : "text-destructive"}`}>
-            {summary.remainingSpecialExpenseReserve >= 0
-              ? formatYen(summary.remainingSpecialExpenseReserve)
-              : `超過${formatYen(Math.abs(summary.remainingSpecialExpenseReserve))}`}
-          </p>
+      </div>
+
+      {/* 3-2. 特別費: 確保額に対する使用状況(確保額の範囲内なら生活費を圧迫しない、超過分だけ影響する) */}
+      <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">特別費(旅行・帰省など)</span>
+          <span className="text-muted-foreground">
+            使用済み {formatYen(summary.actualSpecialExpenses)} / 確保額 {formatYen(summary.specialExpenseReserve)}
+          </span>
         </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            className={`h-full rounded-full ${summary.specialExpenseOverage > 0 ? "bg-destructive" : "bg-[oklch(0.85_0.22_195)]"}`}
+            style={{
+              width: `${
+                summary.specialExpenseReserve > 0
+                  ? Math.min(100, Math.round((summary.actualSpecialExpenses / summary.specialExpenseReserve) * 100))
+                  : summary.actualSpecialExpenses > 0
+                    ? 100
+                    : 0
+              }%`,
+            }}
+          />
+        </div>
+        <p className={`text-[11px] ${summary.specialExpenseOverage > 0 ? "text-destructive font-bold" : "text-muted-foreground"}`}>
+          {summary.specialExpenseOverage > 0
+            ? `確保額を${formatYen(summary.specialExpenseOverage)}超過(超過分だけ生活費から差し引いています)`
+            : `残り${formatYen(summary.remainingSpecialExpenseReserve)}`}
+        </p>
       </div>
 
       {/* 4. カテゴリ予算(変動費のみ) */}
