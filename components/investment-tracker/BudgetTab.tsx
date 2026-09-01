@@ -352,7 +352,7 @@ export function BudgetTab({
                   <select
                     value={categoryNature(c)}
                     onChange={(e) => onSetCategoryNature(c.id, e.target.value as ExpenseNature)}
-                    className={`${inputClass} w-24 shrink-0 py-1 text-[11px]`}
+                    className="w-24 shrink-0 rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
                     aria-label={`${c.label}の分類`}
                   >
                     {(Object.keys(NATURE_LABELS) as ExpenseNature[]).map((n) => (
@@ -413,7 +413,7 @@ export function BudgetTab({
           <select
             value={newCategoryKind}
             onChange={(e) => setNewCategoryKind(e.target.value as BudgetCategoryKind)}
-            className={`${inputClass} w-24 shrink-0`}
+            className="w-24 shrink-0 rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
           >
             <option value="expense">支出</option>
             <option value="income">収入</option>
