@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { RefreshCw } from "lucide-react";
 import { AchievementsTab } from "@/components/investment-tracker/AchievementsTab";
 import { AssetsTab } from "@/components/investment-tracker/AssetsTab";
 import { BottomNav, type TabKey } from "@/components/investment-tracker/BottomNav";
@@ -141,6 +142,7 @@ export default function InvestmentTrackerPage() {
   const [loaded, setLoaded] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TabKey>("home");
+  const [reloading, setReloading] = useState(false);
 
   useEffect(() => {
     setGoals(loadGoals());
@@ -402,13 +404,24 @@ export default function InvestmentTrackerPage() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-2 font-mono text-xs">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4 py-2 font-mono text-xs">
         <Link href="/" className="neon-text-pink underline shrink-0">
           ← ホーム
         </Link>
-        <span className="truncate text-muted-foreground">
+        <span className="min-w-0 flex-1 truncate text-right text-muted-foreground">
           🌙 Lv.{rank.level} 総資産 <span className="gold-text font-bold">{formatYen(totalAssets)}</span>
         </span>
+        <button
+          type="button"
+          onClick={() => {
+            setReloading(true);
+            window.location.reload();
+          }}
+          aria-label="ページを再読み込み"
+          className="shrink-0 rounded-full border border-white/15 p-1.5 text-muted-foreground hover:bg-white/5 hover:text-foreground"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${reloading ? "animate-spin" : ""}`} />
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">

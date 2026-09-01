@@ -129,9 +129,15 @@
       radial-gradient(circle at 50% 0%, oklch(0.7 0.25 330 / 18%), transparent 60%);
     background-size: 48px 48px, 48px 48px, 100% 100%;
     background-attachment: fixed;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    width: 100%;
   }
   html {
     @apply font-sans;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    width: 100%;
   }
 }
 
