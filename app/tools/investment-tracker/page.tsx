@@ -43,6 +43,7 @@ import {
 import {
   addCategory,
   addTransaction,
+  categoryBudgetStatusForMonth,
   categoryNature,
   loadCategories,
   loadHouseholdSettings,
@@ -65,6 +66,8 @@ import {
 } from "@/lib/household";
 import {
   computeGoalFundingPlan,
+  emergencyFundMonthsCovered,
+  essentialMonthlyExpenses,
   loadHouseholdDiagnosisSettings,
   loadHouseholdProfile,
   loadSpecialExpenses,
@@ -98,11 +101,13 @@ import {
   loadMonthlyReviews,
   monthlyHistory,
   monthlySurplus,
+  reviewNeedsReconciliation,
   saveMonthlyReviews,
   upsertMonthlyReview,
   type MonthlyReview,
 } from "@/lib/monthlyReview";
 import { suggestBudgetAdjustments } from "@/lib/budgetSuggestions";
+import { buildHouseholdGuidance, type HouseholdGuidance } from "@/lib/householdGuidance";
 import {
   addSpecialExpenseCandidate,
   estimatedAnnualSpecialExpenses,
@@ -382,6 +387,27 @@ export default function InvestmentTrackerPage() {
     setInvestmentEntryRequestId((n) => n + 1);
   }
 
+  // 「困ったらここ」ボタンの「わかった」を押した時の遷移。既存画面への誘導が
+  // 意味を持つreasonだけ処理し、それ以外(赤字・予算超過・提案の確認待ちなど、
+  // 同じダッシュボード上に既に表示されている内容)は何もせずモーダルを閉じるだけでよい。
+  function handleGuidanceAction(
+    guidance: HouseholdGuidance,
+    unreviewedMonth: string | null,
+    reconciliationMonth: string | null
+  ) {
+    if (guidance.reason === "review_needs_reconciliation" && reconciliationMonth) {
+      setSelectedReviewMonth(reconciliationMonth);
+    } else if (guidance.reason === "unreviewed_past_month" && unreviewedMonth) {
+      setSelectedReviewMonth(unreviewedMonth);
+    } else if (
+      guidance.reason === "emergency_fund_low" ||
+      guidance.reason === "goal_insufficient" ||
+      guidance.reason === "goal_achievable_with_bonus"
+    ) {
+      setShowDiagnosisDetail(true);
+    }
+  }
+
   function handleCreate(input: NewGoalInput) {
     persist([...goals, createGoal(input)]);
     setFormMode({ type: "closed" });
@@ -456,6 +482,48 @@ export default function InvestmentTrackerPage() {
   const hasOlderReviewMonth = reviewTargetIndex >= 0 && reviewTargetIndex < reviewableMonthsDesc.length - 1;
   const hasNewerReviewMonth = reviewTargetIndex > 0;
   const investmentCategoryId = categories.find((c) => c.kind === "expense" && categoryNature(c) === "investment")?.id ?? null;
+
+  // 「困ったらここ」ボタン用のガイダンス。既に算出済みの各種判定結果を集約するだけで、
+  // ここで新しい計算式は増やさない(lib/householdGuidance.ts参照)。
+  const dashboardSummary = currentMonthlyBudget ? buildHouseholdDashboardSummary(currentMonthlyBudget, transactions, categories) : null;
+  const budgetSuggestionsForDashboard = suggestBudgetAdjustments(transactions, categories, completedMonthsDesc);
+  const overBudgetCategoryCount = categoryBudgetStatusForMonth(transactions, categories, nowMonth).filter(
+    (b) => categoryNature(b.category) === "variable" && b.overBudget
+  ).length;
+  const unreviewedPastMonth =
+    reviewableMonthsDesc.find((m) => {
+      const r = getMonthlyReview(monthlyReviews, m);
+      return !r || r.reviewedAt === null;
+    }) ?? null;
+  // reviewableMonthsDesc全体から「再確認が必要」な月を探す。現在UIで表示中のreviewTargetMonth
+  // だけを見ると、ユーザーが◀/▶で表示月を切り替えるだけでGuidanceの回答が変わってしまう
+  // (UIのナビゲーション状態にGuidanceが依存してしまう)ため、対象を広げて独立に判定する。
+  const monthNeedingReconciliation =
+    reviewableMonthsDesc.find((m) =>
+      reviewNeedsReconciliation(getMonthlyReview(monthlyReviews, m), monthlySurplus(transactions, categories, m))
+    ) ?? null;
+  const essential = householdProfile ? essentialMonthlyExpenses(householdProfile) : 0;
+  const efMonthsCovered = householdProfile ? emergencyFundMonthsCovered(householdProfile.savings.cashSavingsBalance, essential) : null;
+  const transactionCountThisMonth = transactions.filter((t) => monthKey(t.date) === nowMonth).length;
+  const householdGuidance = currentMonthlyBudget
+    ? buildHouseholdGuidance({
+        hasMonthlyBudget: true,
+        remainingSpendable: dashboardSummary?.remainingSpendable ?? null,
+        overBudgetCategoryCount,
+        spendingPace: dashboardSummary?.spendingPace ?? null,
+        monthNeedingReconciliation,
+        hasUnresolvedLargeExpense: pendingSpecialExpenseCandidate !== null,
+        hasUnreviewedPastMonth: unreviewedPastMonth !== null,
+        unreviewedPastMonth,
+        budgetAdjustmentSuggestionCount: budgetSuggestionsForDashboard.length,
+        hasSpecialReserveSuggestion: hasAnnualSpecialCandidate,
+        emergencyFundMonthsCovered: efMonthsCovered,
+        emergencyFundTargetMonths: householdProfile?.emergencyFundMonths ?? 3,
+        goalFeasibility: goalFundingPlan?.feasibility ?? null,
+        transactionCountThisMonth,
+      })
+    : null;
+
   const householdNetYen = totalNetYen(transactions, categories);
   const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
   const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
@@ -577,19 +645,21 @@ export default function InvestmentTrackerPage() {
                   />
                 )}
                 <HouseholdDashboard
-                  summary={buildHouseholdDashboardSummary(currentMonthlyBudget, transactions, categories)}
+                  summary={dashboardSummary!}
                   categories={categories}
                   transactions={transactions}
                   month={nowMonth}
                   monthlyHistoryEntries={monthlyHistory(transactions, categories, monthlyReviews).filter((e) => e.month !== nowMonth)}
                   selectedReviewMonth={reviewTargetMonth}
                   onSelectReviewMonth={(m) => setSelectedReviewMonth(m)}
-                  budgetSuggestions={suggestBudgetAdjustments(transactions, categories, completedMonths(transactions, categories))}
+                  budgetSuggestions={budgetSuggestionsForDashboard}
                   specialReserveSuggestion={
                     hasAnnualSpecialCandidate ? { estimatedMonthlyReserve: estimatedMonthlySpecial, annualTotal: estimatedAnnualSpecial } : null
                   }
                   goalType={householdProfile?.goal?.type ?? null}
                   goalFundingPlan={goalFundingPlan}
+                  guidance={householdGuidance!}
+                  onGuidanceAction={() => handleGuidanceAction(householdGuidance!, unreviewedPastMonth, monthNeedingReconciliation)}
                   onEditBudget={() => setEditingBudget(true)}
                   onGoToDiagnosis={() => setShowDiagnosisDetail((v) => !v)}
                   onAdoptBudgetSuggestion={handleSetCategoryBudget}

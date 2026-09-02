@@ -11,10 +11,12 @@ import type { HouseholdDashboardSummary, SpendingPaceStatus } from "@/lib/monthl
 import type { MonthlyHistoryEntry } from "@/lib/monthlyReview";
 import type { BudgetAdjustmentSuggestion } from "@/lib/budgetSuggestions";
 import type { GoalFundingPlan } from "@/lib/householdDiagnosis";
+import type { HouseholdGuidance } from "@/lib/householdGuidance";
 import { LunaCoach } from "../LunaCoach";
 import { MonthlyHistoryList } from "./MonthlyHistoryList";
 import { BudgetSuggestionCard } from "./BudgetSuggestionCard";
 import { SpecialReserveSuggestionCard } from "./SpecialReserveSuggestionCard";
+import { HouseholdGuidanceButton } from "./HouseholdGuidanceButton";
 
 // remainingSpendableが、今月使ってよい総額(monthlySpendableBudget)のこの割合を下回ったら「少なくなってきた」と案内する。
 // spec上の明示的な閾値指定は無いため、独自の目安として採用。
@@ -68,6 +70,8 @@ export function HouseholdDashboard({
   specialReserveSuggestion,
   goalType,
   goalFundingPlan,
+  guidance,
+  onGuidanceAction,
   onEditBudget,
   onGoToDiagnosis,
   onAdoptBudgetSuggestion,
@@ -84,6 +88,8 @@ export function HouseholdDashboard({
   specialReserveSuggestion: { estimatedMonthlyReserve: number; annualTotal: number } | null;
   goalType: string | null;
   goalFundingPlan: GoalFundingPlan | null;
+  guidance: HouseholdGuidance;
+  onGuidanceAction: () => void;
   onEditBudget: () => void;
   onGoToDiagnosis: () => void;
   onAdoptBudgetSuggestion: (categoryId: string, budgetYen: number) => void;
@@ -117,6 +123,7 @@ export function HouseholdDashboard({
       </div>
 
       <LunaCoach variant={luna.variant} message={luna.message} />
+      <HouseholdGuidanceButton guidance={guidance} onAction={onGuidanceAction} />
 
       {/* 2. 月末予想 */}
       <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 font-mono">
