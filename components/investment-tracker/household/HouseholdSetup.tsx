@@ -115,6 +115,7 @@ export function HouseholdSetup({
       {step === 1 && (
         <IncomeStep
           value={profile.income}
+          mode={mode}
           onNext={(income) => {
             setProfile((p) => ({
               ...p,

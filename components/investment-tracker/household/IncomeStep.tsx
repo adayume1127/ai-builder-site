@@ -15,16 +15,23 @@ function toBonusPaymentDrafts(payments: BonusPayment[]): BonusPaymentDraft[] {
 
 export function IncomeStep({
   value,
+  mode,
   onNext,
 }: {
   value: HouseholdProfile["income"];
+  // "create"(新規診断)ではannualBonusの新規入力を受け付けない(bonusPaymentsに一本化する
+  // legacy化方針)。"edit"(再診断)で既存プロファイルにannualBonus>0が残っている場合のみ、
+  // 参考情報として表示し、bonusPaymentsへの移行を促す。
+  mode: "create" | "edit";
   onNext: (income: HouseholdProfile["income"]) => void;
 }) {
   const [monthlyTakeHome, setMonthlyTakeHome] = useState(value.monthlyTakeHome ? String(value.monthlyTakeHome) : "");
   const [otherMonthlyIncome, setOtherMonthlyIncome] = useState(
     value.otherMonthlyIncome ? String(value.otherMonthlyIncome) : ""
   );
-  const [annualBonus, setAnnualBonus] = useState(value.annualBonus ? String(value.annualBonus) : "");
+  // annualBonusはlegacy field。新規入力欄は出さず、既存値をそのまま引き継ぐだけにする
+  // (ユーザーがここで新しい値を入力・上書きする経路は用意しない)。
+  const legacyAnnualBonus = value.annualBonus ?? 0;
   // 既存のannualBonusから自動生成はしない(支給月が分からないため)。ユーザーが手動で追加する。
   const [bonusPayments, setBonusPayments] = useState<BonusPaymentDraft[]>(toBonusPaymentDrafts(value.bonusPayments ?? []));
 
@@ -50,7 +57,7 @@ export function IncomeStep({
     onNext({
       monthlyTakeHome: Math.max(0, Number(monthlyTakeHome) || 0),
       otherMonthlyIncome: Math.max(0, Number(otherMonthlyIncome) || 0),
-      annualBonus: Math.max(0, Number(annualBonus) || 0),
+      annualBonus: legacyAnnualBonus, // このステップでは編集させない。既存値をそのまま引き継ぐ
       bonusPayments: validPayments,
     });
   }
@@ -79,29 +86,24 @@ export function IncomeStep({
           className={inputClass}
         />
       </div>
-      <div className="space-y-1">
-        <label className="font-mono text-xs text-muted-foreground">年間ボーナス(円・任意)</label>
-        <input
-          type="number"
-          inputMode="decimal"
-          value={annualBonus}
-          onChange={(e) => setAnnualBonus(e.target.value)}
-          placeholder="例: 600000"
-          className={inputClass}
-        />
-        <p className="text-[10px] text-muted-foreground">
-          ボーナスは毎月の生活費計算には含めません。特別費や大きな買い物の原資として別枠で考えます。
-        </p>
-      </div>
+      {mode === "edit" && legacyAnnualBonus > 0 && (
+        <div className="space-y-1 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+          <p className="font-mono text-xs text-muted-foreground">
+            以前の診断で登録した年間ボーナス: {legacyAnnualBonus.toLocaleString("ja-JP")}円(参考情報)
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            この金額は現在の目標達成プランには反映されません。反映したい場合は、下の「ボーナスの支給予定」に
+            支給年月と金額を登録してください。
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
         <label className="font-mono text-xs text-muted-foreground">ボーナスの支給予定(任意)</label>
-        {Number(annualBonus) > 0 && bonusPayments.length === 0 && (
-          <p className="text-[10px] text-muted-foreground">
-            年間ボーナス{Number(annualBonus).toLocaleString("ja-JP")}円が登録されています。支給予定月を入力すると、
-            目標達成プランに反映できます。
-          </p>
-        )}
+        <p className="text-[10px] text-muted-foreground">
+          支給予定の年月と金額を登録すると、貯金目標の「目標達成プラン」に反映できます
+          (毎月の生活費計算には含めません)。
+        </p>
         {bonusPayments.map((p, i) => (
           <div key={i} className="flex items-center gap-1.5">
             <input
