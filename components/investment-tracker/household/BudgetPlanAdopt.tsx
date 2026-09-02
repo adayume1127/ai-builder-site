@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { formatYen } from "@/lib/portfolio";
 import { LunaCoach } from "../LunaCoach";
 import type { MonthlyBudget, RecommendedMonthlyBudget } from "@/lib/monthlyBudget";
+import type { GoalFeasibility, GoalFundingPlan } from "@/lib/householdDiagnosis";
 
 const inputClass =
   "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]";
@@ -26,6 +27,20 @@ const CTA_LABEL: Record<Variant, string> = {
   edit: "この内容で更新する",
 };
 
+// 「困ったらここ」ボタン(lib/householdGuidance.ts)と同じ、事実確認寄りのトーンを踏襲する。
+// 既存ロジックが決めていない資金配分の優先順位(例: 投資より生活防衛資金を優先する)を
+// この画面だけで示唆しない。
+function goalFeasibilityMessage(feasibility: GoalFeasibility): string {
+  switch (feasibility) {
+    case "on_track_without_bonus":
+      return "貯金目標: 家計診断のおすすめ額を毎月続ければ、期限までに届く見込みです。";
+    case "achievable_with_bonus":
+      return "貯金目標: 家計診断のおすすめ額に加え、期限内のボーナスも充てれば届く見込みです。";
+    case "insufficient_even_with_bonus":
+      return "貯金目標: 家計診断のおすすめ額を毎月続けても、期限までには届かない見込みです。";
+  }
+}
+
 function toDraft(source: RecommendedMonthlyBudget): Record<DraftKey, string> {
   return {
     totalIncome: String(source.totalIncome),
@@ -45,11 +60,22 @@ export function BudgetPlanAdopt({
   diagnosisRecommendation,
   previousBudget,
   onAdopt,
+  emergencyFundMonthsCovered,
+  emergencyFundTargetMonths,
+  goalFundingPlan,
 }: {
   variant: Variant;
   diagnosisRecommendation: RecommendedMonthlyBudget;
   previousBudget: MonthlyBudget | null;
   onAdopt: (values: RecommendedMonthlyBudget) => void;
+  // 生活防衛資金・貯金目標の参考情報。どちらもHouseholdProfile(診断結果)起点の現状値/
+  // シミュレーションであり、この画面でdraftを編集してもリアルタイムには追従しない
+  // (goalFundingPlanはrecommendMonthlyBudget().plannedCashSavings固定で計算されている)。
+  // そのためrecommendMonthlyBudget()の按分ロジック自体は変更せず、あくまで参考情報として
+  // 表示するだけに留める(GPT設計相談での結論)。
+  emergencyFundMonthsCovered: number | null;
+  emergencyFundTargetMonths: number;
+  goalFundingPlan: GoalFundingPlan | null;
 }) {
   const baseline = previousBudget ?? diagnosisRecommendation;
   const [showEditor, setShowEditor] = useState(variant !== "rollover");
@@ -166,6 +192,25 @@ export function BudgetPlanAdopt({
               {formatYen(monthlySpendable)}
             </span>
           </div>
+        </div>
+      )}
+
+      {(emergencyFundMonthsCovered !== null || goalFundingPlan) && (
+        <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+          <h3 className="font-mono text-xs text-muted-foreground">家計の参考情報</h3>
+          {emergencyFundMonthsCovered !== null && (
+            <p className="font-mono text-xs text-muted-foreground">
+              生活防衛資金: 現在 約{emergencyFundMonthsCovered.toFixed(1)}ヶ月分 / 目標 {emergencyFundTargetMonths}ヶ月分
+            </p>
+          )}
+          {goalFundingPlan && (
+            <p className="font-mono text-xs text-muted-foreground">{goalFeasibilityMessage(goalFundingPlan.feasibility)}</p>
+          )}
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            生活防衛資金は現在の状況、貯金目標は家計診断のおすすめ額をもとにしたシミュレーションです。
+            この画面で金額を調整しても、これらの表示には連動しません。生活防衛資金や貯金目標への配分は
+            自動調整されないので、気になる場合は採用後に家計簿タブの「困ったらここ」からいつでも確認できます。
+          </p>
         </div>
       )}
 

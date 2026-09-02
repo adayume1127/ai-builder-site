@@ -692,6 +692,9 @@ export default function InvestmentTrackerPage() {
                 diagnosisRecommendation={recommendedMonthlyBudget}
                 previousBudget={editingBudget ? currentMonthlyBudget : previousMonthlyBudget}
                 onAdopt={handleAdoptMonthlyBudget}
+                emergencyFundMonthsCovered={efMonthsCovered}
+                emergencyFundTargetMonths={householdProfile?.emergencyFundMonths ?? 3}
+                goalFundingPlan={goalFundingPlan}
               />
             ) : (
               <div className="space-y-6">
