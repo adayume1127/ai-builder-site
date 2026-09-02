@@ -42,6 +42,7 @@ export const DEFAULT_CATEGORIES: BudgetCategory[] = [
     isDefault: true,
     nature: "special",
   },
+  { id: "investment", label: "投資", kind: "expense", isDefault: true, nature: "investment" },
 ];
 
 // nature未設定の支出カテゴリ(既存データ・分類し忘れた新規カテゴリ)は "variable" 扱いにする。
@@ -54,12 +55,22 @@ const CATEGORIES_KEY = "investment-tracker:budget-categories:v1";
 const TRANSACTIONS_KEY = "investment-tracker:budget-transactions:v1";
 
 const SPECIAL_EXPENSE_CATEGORY: BudgetCategory = DEFAULT_CATEGORIES.find((c) => c.id === "special-expense")!;
+const INVESTMENT_CATEGORY: BudgetCategory = DEFAULT_CATEGORIES.find((c) => c.id === "investment")!;
 
 // 既存ユーザーが保存済みのカテゴリ配列には「特別費」カテゴリが無いため、読み込み時に1件だけ補う軽量マイグレーション。
 // 取引データ(BudgetTransaction)には一切触れない。
 function withSpecialExpenseCategory(categories: BudgetCategory[]): BudgetCategory[] {
   const hasSpecial = categories.some((c) => c.nature === "special");
   return hasSpecial ? categories : [...categories, SPECIAL_EXPENSE_CATEGORY];
+}
+
+// 既存ユーザーの保存済みカテゴリにnature="investment"が1件も無いと、月末レビューの「投資へ」
+// 導線が「カテゴリ管理で投資に分類したカテゴリを選んでください」という案内止まりになり、
+// 実際には投資を記録できない。特別費と同じ考え方で、id/labelではなくnatureの有無で判定し、
+// ユーザーが独自に投資natureのカテゴリを作成済みなら追加しない(非破壊・重複防止)。
+function withInvestmentCategory(categories: BudgetCategory[]): BudgetCategory[] {
+  const hasInvestment = categories.some((c) => c.nature === "investment");
+  return hasInvestment ? categories : [...categories, INVESTMENT_CATEGORY];
 }
 
 export function loadCategories(): BudgetCategory[] {
@@ -69,7 +80,7 @@ export function loadCategories(): BudgetCategory[] {
     if (!raw) return DEFAULT_CATEGORIES;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_CATEGORIES;
-    return withSpecialExpenseCategory(parsed);
+    return withInvestmentCategory(withSpecialExpenseCategory(parsed));
   } catch {
     return DEFAULT_CATEGORIES;
   }
