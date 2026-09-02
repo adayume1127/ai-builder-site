@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { formatYen } from "@/lib/portfolio";
 import type { HouseholdProfile } from "@/lib/householdDiagnosis";
 
 const inputClass =
@@ -11,18 +12,25 @@ const GOAL_TYPES = ["生活防衛資金", "100万円", "旅行", "車", "住宅"
 
 export function GoalStep({
   value,
+  currentCashSavingsYen,
   onBack,
   onNext,
 }: {
   value: HouseholdProfile["goal"];
+  // 参考表示にのみ使う(自動入力はしない)。現在の現金貯金の全額と、この目標のために確保した額は別概念。
+  currentCashSavingsYen: number;
   onBack: () => void;
   onNext: (goal: HouseholdProfile["goal"]) => void;
 }) {
   const [type, setType] = useState(value?.type ?? "");
   const [targetAmount, setTargetAmount] = useState(value?.targetAmount ? String(value.targetAmount) : "");
   const [targetDate, setTargetDate] = useState(value?.targetDate ?? "");
+  const [alreadyEarmarkedAmount, setAlreadyEarmarkedAmount] = useState(
+    value?.alreadyEarmarkedAmount ? String(value.alreadyEarmarkedAmount) : ""
+  );
 
   const noGoal = type === "特に決まっていない";
+  const earmarkedExceedsBalance = Number(alreadyEarmarkedAmount) > currentCashSavingsYen;
 
   function handleNext() {
     if (!type || noGoal) {
@@ -33,6 +41,8 @@ export function GoalStep({
       type,
       targetAmount: targetAmount ? Math.max(0, Number(targetAmount) || 0) : undefined,
       targetDate: targetDate || undefined,
+      alreadyEarmarkedAmount: alreadyEarmarkedAmount ? Math.max(0, Number(alreadyEarmarkedAmount) || 0) : undefined,
+      bonusAllocated: value?.bonusAllocated,
     });
   }
 
@@ -71,6 +81,25 @@ export function GoalStep({
           <div className="space-y-1">
             <label className="font-mono text-xs text-muted-foreground">目標期限(任意)</label>
             <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className={inputClass} />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-xs text-muted-foreground">
+              この目標のために、すでに確保しているお金はありますか？(任意)
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={alreadyEarmarkedAmount}
+              onChange={(e) => setAlreadyEarmarkedAmount(e.target.value)}
+              placeholder="なければ空欄のままでOK"
+              className={inputClass}
+            />
+            <p className="text-[10px] text-muted-foreground">参考: 現在の現金貯金は{formatYen(currentCashSavingsYen)}です(自動入力はしません)。</p>
+            {earmarkedExceedsBalance && (
+              <p className="text-[10px] text-destructive">
+                現在の現金貯金より多い金額です。目標専用の別口座などであれば問題ありません。
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -64,6 +64,7 @@ import {
   type ExpenseNature,
 } from "@/lib/household";
 import {
+  computeGoalFundingPlan,
   loadHouseholdDiagnosisSettings,
   loadHouseholdProfile,
   loadSpecialExpenses,
@@ -279,6 +280,19 @@ export default function InvestmentTrackerPage() {
     }
   }
 
+  // 目標達成プランの「ボーナスをこの目標に使う」金額をユーザーが確定したときだけ保存する。
+  // suggestedBonusAllocated(おすすめ値)は表示にのみ使い、ここを経由するまでprofileへは書き込まない。
+  function handleSaveGoalBonusAllocation(amount: number) {
+    if (!householdProfile?.goal) return;
+    const updated: HouseholdProfile = {
+      ...householdProfile,
+      goal: { ...householdProfile.goal, bonusAllocated: amount },
+      updatedAt: new Date().toISOString(),
+    };
+    setHouseholdProfile(updated);
+    saveHouseholdProfile(updated);
+  }
+
   function handleAdoptSpecialReserve(newReserve: number) {
     const month = monthKey(todayKey());
     const current = getMonthlyBudget(monthlyBudgets, month);
@@ -367,6 +381,17 @@ export default function InvestmentTrackerPage() {
   const recommendedMonthlyBudget = householdProfile
     ? recommendMonthlyBudget(householdProfile, specialExpenses, specialExpenseMode)
     : null;
+  // 目標達成プラン。DiagnosisResult・HouseholdDashboardの両方でこの1箇所の計算結果を共有する
+  // (コンポーネント側で再計算しない。単一の真実源を維持する)。
+  const goalFundingPlan =
+    householdProfile?.goal && recommendedMonthlyBudget
+      ? computeGoalFundingPlan(
+          householdProfile.goal,
+          householdProfile.income.bonusPayments,
+          recommendedMonthlyBudget.plannedCashSavings,
+          householdProfile.goal.bonusAllocated
+        )
+      : null;
   const currentMonthlyBudget = getMonthlyBudget(monthlyBudgets, nowMonth);
   const previousMonthlyBudget = latestMonthlyBudget(monthlyBudgets);
   const pendingSpecialExpenseCandidate = findUnresolvedLargeExpenseCandidate(
@@ -515,6 +540,8 @@ export default function InvestmentTrackerPage() {
                   specialReserveSuggestion={
                     hasAnnualSpecialCandidate ? { estimatedMonthlyReserve: estimatedMonthlySpecial, annualTotal: estimatedAnnualSpecial } : null
                   }
+                  goalType={householdProfile?.goal?.type ?? null}
+                  goalFundingPlan={goalFundingPlan}
                   onEditBudget={() => setEditingBudget(true)}
                   onGoToDiagnosis={() => setShowDiagnosisDetail((v) => !v)}
                   onAdoptBudgetSuggestion={handleSetCategoryBudget}
@@ -559,6 +586,8 @@ export default function InvestmentTrackerPage() {
                       specialExpenses={specialExpenses}
                       specialExpenseMode={specialExpenseMode}
                       transactionMonthCount={transactionMonthCount}
+                      goalFundingPlan={goalFundingPlan}
+                      onSaveGoalBonusAllocation={handleSaveGoalBonusAllocation}
                     />
                   </div>
                 )}

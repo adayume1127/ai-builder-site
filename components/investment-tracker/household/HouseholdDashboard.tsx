@@ -10,6 +10,7 @@ import {
 import type { HouseholdDashboardSummary, SpendingPaceStatus } from "@/lib/monthlyBudget";
 import type { MonthlyHistoryEntry } from "@/lib/monthlyReview";
 import type { BudgetAdjustmentSuggestion } from "@/lib/budgetSuggestions";
+import type { GoalFundingPlan } from "@/lib/householdDiagnosis";
 import { LunaCoach } from "../LunaCoach";
 import { MonthlyHistoryList } from "./MonthlyHistoryList";
 import { BudgetSuggestionCard } from "./BudgetSuggestionCard";
@@ -63,6 +64,8 @@ export function HouseholdDashboard({
   monthlyHistoryEntries,
   budgetSuggestions,
   specialReserveSuggestion,
+  goalType,
+  goalFundingPlan,
   onEditBudget,
   onGoToDiagnosis,
   onAdoptBudgetSuggestion,
@@ -75,6 +78,8 @@ export function HouseholdDashboard({
   monthlyHistoryEntries: MonthlyHistoryEntry[];
   budgetSuggestions: BudgetAdjustmentSuggestion[];
   specialReserveSuggestion: { estimatedMonthlyReserve: number; annualTotal: number } | null;
+  goalType: string | null;
+  goalFundingPlan: GoalFundingPlan | null;
   onEditBudget: () => void;
   onGoToDiagnosis: () => void;
   onAdoptBudgetSuggestion: (categoryId: string, budgetYen: number) => void;
@@ -237,6 +242,18 @@ export function HouseholdDashboard({
           currentReserve={summary.specialExpenseReserve}
           onAdopt={onAdoptSpecialReserve}
         />
+      )}
+
+      {/* 5-6. 目標達成プランの参照カード(「今月あと使えるお金」とは別枠、数値は混ぜない) */}
+      {goalFundingPlan && goalFundingPlan.goalRemaining > 0 && (
+        <div className="space-y-1 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono text-xs">
+          <p className="text-muted-foreground">🎯 目標「{goalType}」まであと{formatYen(goalFundingPlan.goalRemaining)}</p>
+          <p className="text-[11px] text-muted-foreground">
+            月{formatYen(goalFundingPlan.recommendedMonthlyCashSavings)}
+            {goalFundingPlan.bonusAllocated > 0 && ` + 期限内ボーナス${formatYen(goalFundingPlan.bonusAllocated)}`}
+            の計画です(「今月あと使えるお金」には含みません)。
+          </p>
+        </div>
       )}
 
       {/* 6. 補助情報・導線 */}

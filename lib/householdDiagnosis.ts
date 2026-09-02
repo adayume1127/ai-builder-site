@@ -32,8 +32,15 @@ const VARIABLE_EXPENSE_SPLIT_RATIOS = {
 
 export type DataConfidenceState = "confirmed" | "estimated" | "unknown";
 
+export type BonusPayment = { month: string; expectedAmountYen: number }; // month = "YYYY-MM"
+
 export type HouseholdProfile = {
-  income: { monthlyTakeHome: number; otherMonthlyIncome: number; annualBonus: number };
+  income: {
+    monthlyTakeHome: number;
+    otherMonthlyIncome: number;
+    annualBonus: number; // 後方互換のため残す。診断結果の参考表示にのみ使い、目標達成計算には使わない
+    bonusPayments: BonusPayment[]; // 支給予定ごとの年月・金額。空配列 = 未回答
+  };
   fixedExpenses: {
     housing: number;
     utilities: number;
@@ -62,7 +69,22 @@ export type HouseholdProfile = {
     otherSavings: number;
   };
   emergencyFundMonths: 3 | 6 | 12;
-  goal?: { type: string; targetAmount?: number; targetDate?: string };
+  // goalは「ユーザーが設定した目標条件」だけでなく、目標達成シミュレーション用の選択値
+  // (alreadyEarmarkedAmount / bonusAllocated)も含む。HouseholdProfileは診断時の完全な
+  // 事実スナップショットではなく、目標に関してはユーザーが後から調整する値も保持する。
+  goal?: {
+    type: string;
+    targetAmount?: number;
+    targetDate?: string;
+    // この目標のために既に確保している金額。undefined/0 = まだ何も確保していない。
+    // profile.savings.cashSavingsBalance(現金貯金の全額)をそのまま流用しない
+    // (預金全体と、特定の目標のために確保した額は別概念のため)。
+    alreadyEarmarkedAmount?: number;
+    // 期限内に見込まれるボーナスのうち、この目標に充てると確定した金額。undefined = 未確定。
+    // GoalFundingPlanのsuggestedBonusAllocatedはUI初期表示にのみ使い、ユーザーが確定するまで
+    // ここには保存しない。
+    bonusAllocated?: number;
+  };
   confidence: {
     income: DataConfidenceState;
     fixedExpenses: DataConfidenceState;
@@ -90,7 +112,7 @@ export type HouseholdDiagnosisSettings = { specialExpenseMode: SpecialExpenseMod
 export function createEmptyHouseholdProfile(): HouseholdProfile {
   const now = new Date().toISOString();
   return {
-    income: { monthlyTakeHome: 0, otherMonthlyIncome: 0, annualBonus: 0 },
+    income: { monthlyTakeHome: 0, otherMonthlyIncome: 0, annualBonus: 0, bonusPayments: [] },
     fixedExpenses: {
       housing: 0,
       utilities: 0,
@@ -133,6 +155,11 @@ export function loadHouseholdProfile(): HouseholdProfile | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return null;
+    // 既存ユーザーのデータには income.bonusPayments が存在しないため、読み込み時に
+    // 空配列を補う軽量マイグレーション(withSpecialExpenseCategoryと同じ考え方)。
+    if (!Array.isArray(parsed.income?.bonusPayments)) {
+      parsed.income = { ...parsed.income, bonusPayments: [] };
+    }
     return parsed as HouseholdProfile;
   } catch {
     return null;
@@ -316,59 +343,111 @@ export function computeSavingsPlans(available: number, livingExpensesConfidence:
   return { safeSavings, standardSavings, challengeSavings };
 }
 
-// ===== 貯金目標との比較 =====
+// ===== 貯金目標とボーナスの統合(目標達成プラン) =====
+//
+// このセクションはHouseholdProfile.goal起点の「目標達成プラン」を計算する。
+// recommendMonthlyBudget()・MonthlyBudget・「今月あと使えるお金」には一切影響しない、
+// 独立した派生計算(表示専用)。annualBonusは使わず、bonusPaymentsだけをsource of truthとする。
 
-export function goalRequiredMonthlySavings(
-  targetAmount: number,
-  currentCashSavings: number,
-  targetDate: string | undefined,
-  today: Date = new Date()
-): number | null {
+// targetDateが今月以前の場合はnullを返す(remainingMonths<=0は月額換算できないため)。
+// このremainingMonthsの数え方(暦月差)は、bonusAmountWithinDeadline()の「来月から期限月まで」
+// という判定範囲と一致する(例: 今日2026-09、期限2027-06 → 9。来月10月〜期限6月の9ヶ月と対応)。
+function remainingMonthsUntil(targetDate: string | undefined, today: Date = new Date()): number | null {
   if (!targetDate) return null;
   const target = new Date(targetDate);
   if (Number.isNaN(target.getTime())) return null;
-  const remainingMonths =
-    (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
-  if (remainingMonths <= 0) return null; // 期限が過去、または当月中は月額換算できない
-  const remaining = targetAmount - currentCashSavings;
-  if (remaining <= 0) return 0; // すでに達成
-  return remaining / remainingMonths;
+  const remainingMonths = (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
+  return remainingMonths > 0 ? remainingMonths : null;
 }
 
-export type GoalComparison = {
-  requiredMonthlySavings: number | null;
-  isRealistic: boolean;
-  realisticMonthlyAmount: number;
-  estimatedMonthsToGoal: number | null;
+function monthKeyOf(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// 期限内(来月〜期限月、期限月を含む)に支給予定のボーナス合計額。
+// 目標達成プランは「これから期限までに作る」未来の資金計画であるため、当月分は対象外とし、
+// 来月以降(まだ受け取っていない支給予定)だけを数える。
+// 注意: alreadyEarmarkedAmountはcashSavingsBalance(現金貯金の全額)とは別概念であり、
+// 「当月分のボーナスがcashSavingsBalanceに含まれているから二重計上になる」という意味ではない
+// (alreadyEarmarkedAmountに何が含まれるかはユーザーの申告次第で、自動連動しない)。
+export function bonusAmountWithinDeadline(
+  bonusPayments: BonusPayment[],
+  targetDate: string | undefined,
+  today: Date = new Date()
+): number {
+  if (!targetDate) return 0;
+  const target = new Date(targetDate);
+  if (Number.isNaN(target.getTime())) return 0;
+  const targetMonth = monthKeyOf(target);
+  const nextMonth = monthKeyOf(new Date(today.getFullYear(), today.getMonth() + 1, 1));
+  return bonusPayments
+    .filter((p) => p.month >= nextMonth && p.month <= targetMonth)
+    // localStorageの直接編集等で不正な値(NaN等)が紛れ込んでも合計を壊さないよう防御する
+    .reduce((sum, p) => sum + (Number.isFinite(p.expectedAmountYen) ? Math.max(p.expectedAmountYen, 0) : 0), 0);
+}
+
+export type GoalFeasibility = "on_track_without_bonus" | "achievable_with_bonus" | "insufficient_even_with_bonus";
+
+export type GoalFundingPlan = {
+  goalRemaining: number; // max(targetAmount - alreadyEarmarkedAmount, 0)
+  remainingMonths: number;
+  recommendedMonthlyCashSavings: number; // recommendMonthlyBudget().plannedCashSavings(現金分のみ、投資分は含めない)
+  // 「このおすすめ現金貯金額を毎月この目標に充てた場合」のシナリオ計算値。目標専用に確保される
+  // ことを保証する額ではない(生活防衛資金や他の目的との優先順位は現状コードでは強制されていない)。
+  monthlyContributionTotal: number;
+  bonusInWindowTotal: number; // 期限内に支給予定のボーナス合計(参考値)
+  suggestedBonusAllocated: number; // UI初期表示用の提案値。goal.bonusAllocatedへは自動保存しない
+  bonusAllocated: number; // ユーザーが確定した値(未確定ならsuggestedBonusAllocatedと同じ値が入る)
+  fundingGap: number; // 現在のbonusAllocatedを前提にした場合の、なお不足する額
+  // 理論上の達成可能性。bonusAllocated(ユーザーの現在の選択)ではなく、期限内に見込める
+  // bonusInWindowTotal(上限)で判定する。fundingGapとは責務が異なる指標。
+  feasibility: GoalFeasibility;
 };
 
-// 目標達成に必要な月額が家計上の標準貯金額を超える場合、無理な貯金額は提示せず、
-// 標準貯金額をベースにした現実的な達成予定月数を返す。
-export function resolveGoalVsCapacity(
-  requiredMonthlySavings: number | null,
-  standardSavings: number,
-  targetAmount: number,
-  currentCashSavings: number
-): GoalComparison {
-  const remaining = targetAmount - currentCashSavings;
+// bonusAllocatedOverride: HouseholdProfile.goal.bonusAllocatedに保存済みの値。undefinedなら
+// まだユーザーが確定していないため、UI初期表示用にsuggestedBonusAllocatedをそのまま使う
+// (呼び出し側はこの返り値のbonusAllocatedをそのままprofileへ書き戻してはいけない。
+// ユーザーが確定操作をしたときだけ、そのときの値をsaveすること)。
+export function computeGoalFundingPlan(
+  goal: NonNullable<HouseholdProfile["goal"]>,
+  bonusPayments: BonusPayment[],
+  recommendedMonthlyCashSavings: number,
+  bonusAllocatedOverride: number | undefined,
+  today: Date = new Date()
+): GoalFundingPlan | null {
+  if (!goal.targetAmount || goal.targetAmount <= 0) return null;
+  const remainingMonths = remainingMonthsUntil(goal.targetDate, today);
+  if (remainingMonths === null) return null;
 
-  if (requiredMonthlySavings === null) {
-    if (remaining <= 0) {
-      return { requiredMonthlySavings: 0, isRealistic: true, realisticMonthlyAmount: 0, estimatedMonthsToGoal: 0 };
-    }
-    const realisticMonthlyAmount = Math.max(standardSavings, 0);
-    return {
-      requiredMonthlySavings: null,
-      isRealistic: true,
-      realisticMonthlyAmount,
-      estimatedMonthsToGoal: realisticMonthlyAmount > 0 ? Math.ceil(remaining / realisticMonthlyAmount) : null,
-    };
-  }
+  const goalRemaining = Math.max(goal.targetAmount - (goal.alreadyEarmarkedAmount ?? 0), 0);
+  const monthlyCash = Math.max(recommendedMonthlyCashSavings, 0);
+  const monthlyContributionTotal = monthlyCash * remainingMonths;
+  const bonusInWindowTotal = bonusAmountWithinDeadline(bonusPayments, goal.targetDate, today);
+  const suggestedBonusAllocated = Math.min(Math.max(goalRemaining - monthlyContributionTotal, 0), bonusInWindowTotal);
+  const bonusAllocated = Math.min(
+    Math.max(bonusAllocatedOverride ?? suggestedBonusAllocated, 0),
+    bonusInWindowTotal,
+    goalRemaining
+  );
+  const fundingGap = Math.max(goalRemaining - monthlyContributionTotal - bonusAllocated, 0);
+  const feasibility: GoalFeasibility =
+    goalRemaining <= monthlyContributionTotal
+      ? "on_track_without_bonus"
+      : goalRemaining <= monthlyContributionTotal + bonusInWindowTotal
+        ? "achievable_with_bonus"
+        : "insufficient_even_with_bonus";
 
-  const isRealistic = requiredMonthlySavings <= standardSavings;
-  const realisticMonthlyAmount = isRealistic ? requiredMonthlySavings : Math.max(standardSavings, 0);
-  const estimatedMonthsToGoal = realisticMonthlyAmount > 0 ? Math.ceil(remaining / realisticMonthlyAmount) : null;
-  return { requiredMonthlySavings, isRealistic, realisticMonthlyAmount, estimatedMonthsToGoal };
+  return {
+    goalRemaining,
+    remainingMonths,
+    recommendedMonthlyCashSavings: monthlyCash,
+    monthlyContributionTotal,
+    bonusInWindowTotal,
+    suggestedBonusAllocated,
+    bonusAllocated,
+    fundingGap,
+    feasibility,
+  };
 }
 
 // ===== 生活防衛資金 =====

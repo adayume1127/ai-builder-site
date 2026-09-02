@@ -67,7 +67,9 @@ export function LivingExpenseStep({
       const expenses = apportionVariableExpenses(Math.max(0, Number(totalInput) || 0));
       onNext("totalOnly", expenses, "estimated");
     } else {
-      const expenses = provisionalVariableExpenses({ income: { monthlyTakeHome: income, otherMonthlyIncome: 0, annualBonus: 0 } } as HouseholdProfile);
+      const expenses = provisionalVariableExpenses({
+        income: { monthlyTakeHome: income, otherMonthlyIncome: 0, annualBonus: 0, bonusPayments: [] },
+      } as unknown as HouseholdProfile);
       onNext("unknown", expenses, "unknown");
     }
   }

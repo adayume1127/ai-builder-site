@@ -171,6 +171,7 @@ export function HouseholdSetup({
       {step === 5 && (
         <GoalStep
           value={profile.goal}
+          currentCashSavingsYen={profile.savings.cashSavingsBalance}
           onBack={() => setStep(4)}
           onNext={(goal) => {
             setProfile((p) => ({ ...p, goal }));

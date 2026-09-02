@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LunaCoach } from "../LunaCoach";
 import { formatYen } from "@/lib/portfolio";
 import {
@@ -12,16 +12,15 @@ import {
   emergencyFundTarget,
   essentialMonthlyExpenses,
   fixedExpenseRate,
-  goalRequiredMonthlySavings,
   householdScore,
   housingRate,
   monthlySpecialExpenseReserve,
   recommendationMode,
-  resolveGoalVsCapacity,
   savingsRate,
   surplus,
   totalIncome,
   variableExpenseRate,
+  type GoalFundingPlan,
   type HouseholdProfile,
   type SpecialExpense,
   type SpecialExpenseMode,
@@ -32,11 +31,16 @@ export function DiagnosisResult({
   specialExpenses,
   specialExpenseMode,
   transactionMonthCount,
+  goalFundingPlan,
+  onSaveGoalBonusAllocation,
 }: {
   profile: HouseholdProfile;
   specialExpenses: SpecialExpense[];
   specialExpenseMode: SpecialExpenseMode;
   transactionMonthCount: number;
+  // page.tsx側で一度だけ計算した結果を受け取る(このコンポーネント内で再計算しない)。
+  goalFundingPlan: GoalFundingPlan | null;
+  onSaveGoalBonusAllocation: (amount: number) => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -53,12 +57,18 @@ export function DiagnosisResult({
   const floor = discretionaryFloor(income);
   const freeToUse = floor + Math.max(available - plans.standardSavings, 0);
 
-  const goalRequired = profile.goal?.targetAmount
-    ? goalRequiredMonthlySavings(profile.goal.targetAmount, profile.savings.cashSavingsBalance, profile.goal.targetDate)
-    : null;
-  const goalComparison = profile.goal?.targetAmount
-    ? resolveGoalVsCapacity(goalRequired, plans.standardSavings, profile.goal.targetAmount, profile.savings.cashSavingsBalance)
-    : null;
+  // スライダーの下書き値。goal.bonusAllocatedへは「確定する」ボタンを押すまで保存しない
+  // (おすすめ値と、ユーザーが決めた値を混同しないため)。
+  // DiagnosisResultは画面を開いている間ずっとマウントされたままになりうる(例: 特別費プロンプトの
+  // 解決などでrecommendedMonthlyBudget/goalFundingPlanが再計算される)。useStateの初期値は
+  // マウント時にしか使われないため、確定済み値(goal.bonusAllocated)や上限(bonusInWindowTotal/
+  // goalRemaining)が外部要因で変わったときだけ、useEffectでdraftを再同期する
+  // (ユーザーがスライダーを操作中の値を毎render上書きしないよう、依存配列を絞る)。
+  const [bonusAllocatedDraft, setBonusAllocatedDraft] = useState(goalFundingPlan?.bonusAllocated ?? 0);
+  useEffect(() => {
+    setBonusAllocatedDraft(goalFundingPlan?.bonusAllocated ?? 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.goal?.bonusAllocated, goalFundingPlan?.bonusInWindowTotal, goalFundingPlan?.goalRemaining]);
 
   const lunaMessage = (() => {
     if (mode === "cashflow_recovery") {
@@ -109,7 +119,10 @@ export function DiagnosisResult({
         </div>
       ) : (
         <div className="space-y-2">
-          <h3 className="font-mono text-sm text-muted-foreground">毎月の貯金プラン</h3>
+          <div>
+            <h3 className="font-mono text-sm text-muted-foreground">通常月のおすすめ貯金額</h3>
+            <p className="text-[10px] text-muted-foreground">家計から見て無理のない月額です(目標から逆算した必要額とは別です)</p>
+          </div>
           <div className="grid grid-cols-3 gap-2 text-center font-mono">
             <div className="rounded-lg border border-white/15 bg-white/5 p-2">
               <p className="text-[10px] text-muted-foreground">安全</p>
@@ -127,27 +140,83 @@ export function DiagnosisResult({
         </div>
       )}
 
-      {profile.goal && goalComparison && (
-        <div className="space-y-1 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono text-sm">
-          <p className="text-xs text-muted-foreground">目標: {profile.goal.type}</p>
-          {goalComparison.estimatedMonthsToGoal === 0 ? (
+      {profile.goal && goalFundingPlan && (
+        <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono text-sm">
+          <p className="text-xs text-muted-foreground">目標達成プラン: {profile.goal.type}</p>
+
+          {goalFundingPlan.goalRemaining <= 0 ? (
             <p className="neon-text text-xs">すでに目標を達成しています🎉</p>
-          ) : goalComparison.realisticMonthlyAmount <= 0 ? (
+          ) : goalFundingPlan.feasibility === "on_track_without_bonus" ? (
             <p className="text-xs text-muted-foreground">
-              現在の家計では、まず収支改善を優先するのがおすすめです。家計が黒字化した後に目標プランを再計算します。
+              通常月の貯金額(目安)だけで、期限内に達成できる見込みです。ボーナスを使う必要はありません。
             </p>
-          ) : goalComparison.requiredMonthlySavings !== null && !goalComparison.isRealistic ? (
+          ) : goalFundingPlan.feasibility === "achievable_with_bonus" ? (
             <p className="text-xs text-muted-foreground">
-              期限通りだと月{formatYen(goalComparison.requiredMonthlySavings)}必要ですが、現在の家計なら月
-              {formatYen(goalComparison.realisticMonthlyAmount)}程度が現実的です。
-              {goalComparison.estimatedMonthsToGoal !== null &&
-                ` このペースなら約${goalComparison.estimatedMonthsToGoal}ヶ月後に達成できそうです。`}
+              毎月{formatYen(goalFundingPlan.recommendedMonthlyCashSavings)}を{goalFundingPlan.remainingMonths}か月続けると
+              {formatYen(goalFundingPlan.monthlyContributionTotal)}。残り
+              {formatYen(Math.max(goalFundingPlan.goalRemaining - goalFundingPlan.monthlyContributionTotal, 0))}
+              を期限内のボーナスから確保する計画にすると、達成しやすくなります。
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              月{formatYen(goalComparison.realisticMonthlyAmount)}のペースで、
-              {goalComparison.estimatedMonthsToGoal !== null ? `約${goalComparison.estimatedMonthsToGoal}ヶ月後` : "無理のないペース"}
-              に達成予定です。
+              毎月の積立予定とボーナス予定を合わせても、期限までに
+              {formatYen(
+                Math.max(goalFundingPlan.goalRemaining - goalFundingPlan.monthlyContributionTotal - goalFundingPlan.bonusInWindowTotal, 0)
+              )}
+              ほど不足する見込みです。毎月の貯金額を増やす、目標額を見直す、期限を延ばす、のいずれかをおすすめします。
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+            <DetailRow label="目標額" value={formatYen(profile.goal.targetAmount ?? 0)} />
+            <DetailRow label="既に確保済み" value={formatYen(profile.goal.alreadyEarmarkedAmount ?? 0)} />
+            <DetailRow label="残り必要額" value={formatYen(goalFundingPlan.goalRemaining)} />
+            <DetailRow label="期限まで" value={`${goalFundingPlan.remainingMonths}ヶ月`} />
+          </div>
+
+          {goalFundingPlan.bonusInWindowTotal > 0 ? (
+            <div className="space-y-1.5 border-t border-white/10 pt-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">この目標にボーナスを使う</span>
+                <span className="gold-text font-bold">{formatYen(bonusAllocatedDraft)}</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                // computeGoalFundingPlan()側のクランプ(bonusInWindowTotal・goalRemainingの両方が上限)と
+                // スライダーのUI上限を一致させる。ここがbonusInWindowTotalだけだと、goalRemainingの方が
+                // 小さいケースで「UI上は選べるが確定すると値が切り詰められる」ズレが起きる。
+                max={Math.min(goalFundingPlan.bonusInWindowTotal, goalFundingPlan.goalRemaining)}
+                value={bonusAllocatedDraft}
+                onChange={(e) => setBonusAllocatedDraft(Number(e.target.value))}
+                className="w-full"
+                aria-label="ボーナスからこの目標に充てる金額"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                期限内に見込まれるボーナス: {formatYen(goalFundingPlan.bonusInWindowTotal)}
+              </p>
+              <button
+                type="button"
+                onClick={() => onSaveGoalBonusAllocation(bonusAllocatedDraft)}
+                className="w-full rounded-lg gold-border gold-text px-3 py-1.5 text-[11px]"
+              >
+                この金額で確定する
+              </button>
+              {(() => {
+                const gapAtDraft = Math.max(
+                  goalFundingPlan.goalRemaining - goalFundingPlan.monthlyContributionTotal - bonusAllocatedDraft,
+                  0
+                );
+                return gapAtDraft > 0 ? (
+                  <p className="text-[11px] text-destructive">現在の計画では、あと{formatYen(gapAtDraft)}不足しています。</p>
+                ) : null;
+              })()}
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground border-t border-white/10 pt-2">
+              {profile.income.bonusPayments.length === 0
+                ? "ボーナスの支給予定月を入力すると、目標達成プランに活用できます。"
+                : "期限内に支給予定のボーナスがないため、目標達成プランには反映していません。"}
             </p>
           )}
         </div>
