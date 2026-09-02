@@ -110,6 +110,7 @@ import {
   findUnresolvedLargeExpenseCandidate,
   loadResolvedSpecialExpensePromptIds,
   loadSpecialExpenseCandidates,
+  removeSpecialExpenseCandidatesForTransaction,
   saveResolvedSpecialExpensePromptIds,
   saveSpecialExpenseCandidates,
   type SpecialExpenseCandidate,
@@ -203,6 +204,21 @@ export default function InvestmentTrackerPage() {
     const next = removeTransaction(transactions, id);
     setTransactions(next);
     saveTransactions(next);
+
+    // 削除した取引を元にした特別費候補が残ると、実在しない取引の金額が
+    // 年間特別費の見積もりに残り続けてしまうため、合わせて取り除く。
+    const nextCandidates = removeSpecialExpenseCandidatesForTransaction(specialExpenseCandidates, id);
+    if (nextCandidates.length !== specialExpenseCandidates.length) {
+      setSpecialExpenseCandidates(nextCandidates);
+      saveSpecialExpenseCandidates(nextCandidates);
+    }
+    // resolvedPromptIdsに残っていても実害はないが(存在しない取引idは二度とマッチしない)、
+    // ストレージを肥大化させないため合わせて掃除する。
+    if (resolvedPromptIds.includes(id)) {
+      const nextResolved = resolvedPromptIds.filter((rid) => rid !== id);
+      setResolvedPromptIds(nextResolved);
+      saveResolvedSpecialExpensePromptIds(nextResolved);
+    }
   }
 
   function handleAddCategory(label: string, kind: BudgetCategoryKind) {

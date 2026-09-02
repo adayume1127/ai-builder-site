@@ -12,6 +12,13 @@ const RECURRENCE_OPTIONS: { value: SpecialExpenseCandidateRecurrence; label: str
   { value: "one_time", label: "今回だけ" },
 ];
 
+// 過去月の見逃した支出も対象になったため、「いつの支出か」を必ず明示する
+// (今月の支出だけを想定した文言のままだと、過去月の取引が出たときに混乱を招くため)。
+function formatMonthDayLabel(dateStr: string): string {
+  const [, m, d] = dateStr.split("-");
+  return `${Number(m)}月${Number(d)}日`;
+}
+
 export function SpecialExpensePrompt({
   transaction,
   categoryLabel,
@@ -28,7 +35,7 @@ export function SpecialExpensePrompt({
       <div className="space-y-3 rounded-xl gold-border bg-white/5 p-3">
         <LunaCoach
           variant="watch"
-          message={`${formatYen(transaction.amount)}の支出です(${categoryLabel})。普段の生活費ではなく特別費として記録しますか?`}
+          message={`${formatMonthDayLabel(transaction.date)}の${formatYen(transaction.amount)}の支出です(${categoryLabel})。普段の生活費ではなく特別費として記録しますか?`}
         />
         <div className="flex gap-2 font-mono text-xs">
           <button

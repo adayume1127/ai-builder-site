@@ -37,22 +37,45 @@ function categoryTransactionAmounts(transactions: BudgetTransaction[], categoryI
   return transactions.filter((t) => t.categoryId === categoryId && t.id !== excludeTransactionId).map((t) => t.amount);
 }
 
-// 今月の取引のうち、まだ確認していない(resolvedTransactionIdsに含まれない)大口支出候補を1件返す。
-// 一度に複数プロンプトを出さず、最新のものから1件だけ提示する。
+// 大口支出の探索対象にする月数(今月を含む)。無制限に過去へ遡ると、古い取引について
+// 今さら「特別費にしますか?」と聞かれても文脈を思い出せずノイズになるため、直近半年程度に絞る。
+export const LARGE_EXPENSE_LOOKBACK_MONTHS = 6;
+
+// month は "YYYY-MM"(ゼロパディング済み)、monthsBack は1以上の整数を前提とする内部専用ヘルパー。
+function monthKeyMinus(month: string, monthsBack: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(y, m - 1 - monthsBack, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// 直近lookbackMonths分(今月を含む。lookbackMonths >= 1が契約)の取引のうち、まだ確認していない
+// (resolvedTransactionIdsに含まれない)大口支出候補を1件返す。一度に複数プロンプトを出さず、
+// 最新の取引から1件だけ提示する(今月の取引が最初に見つかればそれを優先し、無ければ過去月へ
+// 遡って見逃した支出を拾う)。この「今月も対象に含める」判定は、月次レビュー(lib/monthlyReview.ts)
+// が「完了した月だけを対象にする」のとは意図的に異なる — 大口支出検知は取引が記録された時点で
+// その支出の性質を確認する機能であり、月が完了しているかどうかとは無関係なため
+// (詳細はdocs/gpt-review-context.mdの「今月の扱い」を参照)。
 // 対象は kind="expense" かつ nature="variable" の取引のみ
 // (収入・固定費・投資・貯金・すでに特別費のものは原則として候補にしない)。
+// 同一取引は resolvedTransactionIds によって月をまたいでも二度と候補にならない
+// (「特別費にする」「通常支出のまま」いずれの回答でもtransaction.idが記録されるため)。
 export function findUnresolvedLargeExpenseCandidate(
   transactions: BudgetTransaction[],
   categories: BudgetCategory[],
   resolvedTransactionIds: Set<string>,
-  month: string
+  currentMonth: string,
+  lookbackMonths: number = LARGE_EXPENSE_LOOKBACK_MONTHS
 ): BudgetTransaction | null {
   const categoryById = new Map(categories.map((c) => [c.id, c]));
-  const monthTransactions = transactions
-    .filter((t) => monthKey(t.date) === month)
+  const earliestMonth = monthKeyMinus(currentMonth, lookbackMonths - 1);
+  const windowTransactions = transactions
+    .filter((t) => {
+      const mk = monthKey(t.date);
+      return mk >= earliestMonth && mk <= currentMonth;
+    })
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
 
-  for (const t of monthTransactions) {
+  for (const t of windowTransactions) {
     if (resolvedTransactionIds.has(t.id)) continue;
     const category = categoryById.get(t.categoryId);
     if (!category || category.kind !== "expense") continue;
@@ -89,6 +112,12 @@ export function saveResolvedSpecialExpensePromptIds(ids: string[]) {
 }
 
 // ===== 特別費候補(将来も発生しそうな支出の記録) =====
+//
+// SpecialExpenseCandidateは、独立した将来計画ではなく sourceTransactionId が指す
+// BudgetTransaction に従属する派生データ(amountもその取引の金額をそのまま持つ)。
+// そのため、元の取引が削除された場合は候補も一緒に削除する
+// (removeSpecialExpenseCandidatesForTransaction参照)。「毎年ありそう」等の
+// recurrence判断だけを取引削除後も独立して保持する、という仕様にはしていない。
 
 export type SpecialExpenseCandidateRecurrence = "annual" | "occasional" | "one_time";
 
@@ -130,6 +159,15 @@ export function addSpecialExpenseCandidate(
   input: Omit<SpecialExpenseCandidate, "id" | "createdAt">
 ): SpecialExpenseCandidate[] {
   return [...candidates, { ...input, id: crypto.randomUUID(), createdAt: new Date().toISOString() }];
+}
+
+// 元になった取引(sourceTransactionId)が削除された候補を取り除く。
+// 取り除かないと、実在しない取引の金額が estimatedAnnualSpecialExpenses() に残り続けてしまう。
+export function removeSpecialExpenseCandidatesForTransaction(
+  candidates: SpecialExpenseCandidate[],
+  transactionId: string
+): SpecialExpenseCandidate[] {
+  return candidates.filter((c) => c.sourceTransactionId !== transactionId);
 }
 
 // ===== 年間特別費の再見積もり(あくまで提案。自動反映はしない) =====
