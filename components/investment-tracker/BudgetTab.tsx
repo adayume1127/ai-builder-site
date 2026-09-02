@@ -26,7 +26,6 @@ const NATURE_LABELS: Record<ExpenseNature, string> = {
   fixed: "固定費",
   variable: "変動費",
   special: "特別費",
-  savings: "貯金",
   investment: "投資",
 };
 

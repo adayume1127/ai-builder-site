@@ -67,11 +67,6 @@ export function actualMonthlyInvestment(transactions: BudgetTransaction[], categ
   return sumExpenseByNature(transactions, categories, month, "investment");
 }
 
-// nature="savings"に手動でタグ付けした取引(現金振替など)の合計。参考値として提供する。
-export function actualSavingsTransactions(transactions: BudgetTransaction[], categories: BudgetCategory[], month: string): number {
-  return sumExpenseByNature(transactions, categories, month, "savings");
-}
-
 // その月に結果として残った現金。既存の monthlySummaries().savingsYen(収入-支出の実績)をそのまま使う
 // (nature別の内訳を積み上げて再計算すると、BudgetTabに既に表示されている数値とわずかでもズレる余地が生まれるため、
 // 単一の真実源から取得する)。「貯金した金額」ではなく「結果として残った現金」である点に注意。

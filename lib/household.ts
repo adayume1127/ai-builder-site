@@ -4,9 +4,16 @@
 
 export type BudgetCategoryKind = "income" | "expense";
 
-// 支出の性質。固定費/貯金/投資は家計診断のMonthlyBudgetですでに月初に確保額を引いてあるため、
+// 支出の性質。固定費/投資は家計診断のMonthlyBudgetですでに月初に確保額を引いてあるため、
 // このタグで「今月あと使えるお金」の実績集計(variable/special)から除外し、二重計上を防ぐ。
-export type ExpenseNature = "fixed" | "variable" | "special" | "savings" | "investment";
+//
+// 「貯金」はここには含めない(過去に nature: "savings" として存在したが未使用のまま
+// 削除した)。現金貯金の計画はMonthlyBudget.plannedCashSavings、実績はmonthlySurplus()
+// (収入-支出の結果)、月末の用途決定はMonthlyReview.allocatedToCashSavingsが担当しており、
+// 「普通預金→貯金用預金」のような口座間振替はBudgetTransactionの支出として記録すると、
+// 実際には現金資産の総額が変わらないのに預金残高(全収支から再計算する仕組み)を
+// 過少計上してしまうため、支出扱いにすること自体が設計と相性が悪い。
+export type ExpenseNature = "fixed" | "variable" | "special" | "investment";
 
 export type BudgetCategory = {
   id: string;
