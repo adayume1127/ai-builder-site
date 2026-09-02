@@ -108,6 +108,14 @@ import {
   upsertMonthlyReview,
   type MonthlyReview,
 } from "@/lib/monthlyReview";
+import {
+  getMonthlyActionState,
+  loadMonthlyActionStates,
+  saveMonthlyActionStates,
+  upsertMonthlyActionState,
+  type CashSavingsActionStatus,
+  type MonthlyActionState,
+} from "@/lib/monthlyActionState";
 import { suggestBudgetAdjustments } from "@/lib/budgetSuggestions";
 import { buildHouseholdGuidance, type HouseholdGuidance } from "@/lib/householdGuidance";
 import {
@@ -138,6 +146,7 @@ export default function InvestmentTrackerPage() {
   const [specialExpenseMode, setSpecialExpenseMode] = useState<SpecialExpenseMode>("unknown");
   const [monthlyBudgets, setMonthlyBudgets] = useState<MonthlyBudget[]>([]);
   const [monthlyReviews, setMonthlyReviews] = useState<MonthlyReview[]>([]);
+  const [monthlyActionStates, setMonthlyActionStates] = useState<MonthlyActionState[]>([]);
   const [specialExpenseCandidates, setSpecialExpenseCandidates] = useState<SpecialExpenseCandidate[]>([]);
   const [resolvedPromptIds, setResolvedPromptIds] = useState<string[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
@@ -176,6 +185,7 @@ export default function InvestmentTrackerPage() {
     setSpecialExpenseMode(loadHouseholdDiagnosisSettings().specialExpenseMode);
     setMonthlyBudgets(loadedMonthlyBudgets);
     setMonthlyReviews(loadMonthlyReviews());
+    setMonthlyActionStates(loadMonthlyActionStates());
     setSpecialExpenseCandidates(loadSpecialExpenseCandidates());
     setResolvedPromptIds(loadResolvedSpecialExpensePromptIds());
 
@@ -433,6 +443,19 @@ export default function InvestmentTrackerPage() {
     const index = reviewableMonthsDesc.indexOf(currentMonth);
     const nextMonth = direction === "older" ? reviewableMonthsDesc[index + 1] : reviewableMonthsDesc[index - 1];
     if (nextMonth) setSelectedReviewMonth(nextMonth);
+  }
+
+  // 「今日のアクション」の先取り貯金アクションへの回答。預金残高・MonthlyBudget・
+  // BudgetTransactionのいずれも変更しない、行動確認の記録のみ(lib/monthlyActionState.ts参照)。
+  function handleUpdateCashSavingsAction(status: CashSavingsActionStatus, amountYen: number) {
+    const next = upsertMonthlyActionState(monthlyActionStates, {
+      month: nowMonth,
+      cashSavingsStatus: status,
+      cashSavingsAmountYen: amountYen,
+      updatedAt: new Date().toISOString(),
+    });
+    setMonthlyActionStates(next);
+    saveMonthlyActionStates(next);
   }
 
   function handleRequestInvestmentEntry() {
@@ -725,6 +748,9 @@ export default function InvestmentTrackerPage() {
                   goalFundingPlan={goalFundingPlan}
                   guidance={householdGuidance!}
                   onGuidanceAction={() => handleGuidanceAction(householdGuidance!, unreviewedPastMonth, monthNeedingReconciliation)}
+                  cashSavingsStatus={getMonthlyActionState(monthlyActionStates, nowMonth)?.cashSavingsStatus ?? null}
+                  cashSavingsAmountYen={getMonthlyActionState(monthlyActionStates, nowMonth)?.cashSavingsAmountYen ?? 0}
+                  onUpdateCashSavingsAction={handleUpdateCashSavingsAction}
                   onEditBudget={() => setEditingBudget(true)}
                   onGoToDiagnosis={() => setShowDiagnosisDetail((v) => !v)}
                   onAdoptBudgetSuggestion={handleSetCategoryBudget}

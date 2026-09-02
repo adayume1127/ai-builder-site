@@ -12,11 +12,14 @@ import type { MonthlyHistoryEntry } from "@/lib/monthlyReview";
 import type { BudgetAdjustmentSuggestion } from "@/lib/budgetSuggestions";
 import type { GoalFundingPlan } from "@/lib/householdDiagnosis";
 import type { HouseholdGuidance } from "@/lib/householdGuidance";
+import type { CashSavingsActionStatus } from "@/lib/monthlyActionState";
+import { buildTodayAction } from "@/lib/todayAction";
 import { LunaCoach } from "../LunaCoach";
 import { MonthlyHistoryList } from "./MonthlyHistoryList";
 import { BudgetSuggestionCard } from "./BudgetSuggestionCard";
 import { SpecialReserveSuggestionCard } from "./SpecialReserveSuggestionCard";
 import { HouseholdGuidanceButton } from "./HouseholdGuidanceButton";
+import { TodayActionCard } from "./TodayActionCard";
 
 // remainingSpendableが、今月使ってよい総額(monthlySpendableBudget)のこの割合を下回ったら「少なくなってきた」と案内する。
 // spec上の明示的な閾値指定は無いため、独自の目安として採用。
@@ -72,6 +75,9 @@ export function HouseholdDashboard({
   goalFundingPlan,
   guidance,
   onGuidanceAction,
+  cashSavingsStatus,
+  cashSavingsAmountYen,
+  onUpdateCashSavingsAction,
   onEditBudget,
   onGoToDiagnosis,
   onAdoptBudgetSuggestion,
@@ -90,6 +96,9 @@ export function HouseholdDashboard({
   goalFundingPlan: GoalFundingPlan | null;
   guidance: HouseholdGuidance;
   onGuidanceAction: () => void;
+  cashSavingsStatus: CashSavingsActionStatus | null;
+  cashSavingsAmountYen: number;
+  onUpdateCashSavingsAction: (status: CashSavingsActionStatus, amountYen: number) => void;
   onEditBudget: () => void;
   onGoToDiagnosis: () => void;
   onAdoptBudgetSuggestion: (categoryId: string, budgetYen: number) => void;
@@ -100,6 +109,20 @@ export function HouseholdDashboard({
   );
   const overBudgetCount = variableBudgetStatuses.filter((b) => b.overBudget).length;
   const luna = lunaDashboardMessage(summary, overBudgetCount);
+
+  // 「今日のアクション」用に、最も超過額が大きい変動費カテゴリを1件だけ選ぶ
+  // (buildTodayActionは判断ロジックを持たず、ここで用意した材料から1件選ぶだけ)。
+  const mostOverBudget = [...variableBudgetStatuses]
+    .filter((b) => b.overBudget)
+    .sort((a, b) => b.spentYen - b.budgetYen - (a.spentYen - a.budgetYen))[0];
+  const todayAction = buildTodayAction({
+    remainingSpendable: summary.remainingSpendable,
+    mostOverBudgetCategory: mostOverBudget
+      ? { label: mostOverBudget.category.label, overAmountYen: mostOverBudget.spentYen - mostOverBudget.budgetYen }
+      : null,
+    plannedCashSavings: summary.plannedCashSavings,
+    cashSavingsStatus,
+  });
 
   const categoryLabelById = new Map(categories.map((c) => [c.id, c.label]));
   const recentTransactions = [...transactions]
@@ -121,6 +144,14 @@ export function HouseholdDashboard({
           </p>
         )}
       </div>
+
+      <TodayActionCard
+        action={todayAction}
+        cashSavingsStatus={cashSavingsStatus}
+        cashSavingsAmountYen={cashSavingsAmountYen}
+        plannedCashSavings={summary.plannedCashSavings}
+        onUpdateCashSavings={onUpdateCashSavingsAction}
+      />
 
       <LunaCoach variant={luna.variant} message={luna.message} />
       <HouseholdGuidanceButton guidance={guidance} onAction={onGuidanceAction} />
