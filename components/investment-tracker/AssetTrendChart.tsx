@@ -178,8 +178,8 @@ export function AssetTrendChart({
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5">
-        <span className="font-mono text-[10px] text-muted-foreground">表示単位</span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="font-mono text-[10px] text-muted-foreground">表示間隔</span>
         {GRANULARITY_OPTIONS.map((g) => (
           <button
             key={g}
@@ -194,6 +194,9 @@ export function AssetTrendChart({
             {GRANULARITY_LABELS[g]}
           </button>
         ))}
+        {/* サンプリング間隔を変えても線の形だけでは差が分かりにくいため、実際に表示されている
+            実績の点数を明示する(GPTレビューでの指摘: 「押しても変わらない」という印象を減らす)。 */}
+        <span className="font-mono text-[10px] text-muted-foreground">実績{actualPoints.length}点表示中</span>
       </div>
 
       <svg
@@ -255,9 +258,12 @@ export function AssetTrendChart({
 
         {actualAreaPath && <path d={actualAreaPath} fill={NEON_CYAN} fillOpacity={0.12} />}
         <path d={actualLinePath} fill="none" stroke={NEON_CYAN} strokeWidth={2} strokeLinejoin="round" />
-        {actualPoints.length === 1 && (
-          <circle cx={xAtTime(toTime(actualPoints[0].date))} cy={yAt(actualPoints[0].valueYen)} r={3} fill={NEON_CYAN} />
-        )}
+        {/* 間引いても線の形だけではサンプリング間隔の違いが伝わりにくいため、実績点は常時マーカー表示する
+            (以前は取引が1件のときだけ表示していた)。点数が多い「月ごと」表示でも密集しすぎないかは
+            Playwrightで確認済み(検証手順は実装レビュー依頼を参照)。 */}
+        {actualPoints.map((p) => (
+          <circle key={p.date} cx={xAtTime(toTime(p.date))} cy={yAt(p.valueYen)} r={3} fill={NEON_CYAN} />
+        ))}
 
         <text x={xAtTime(minTime)} y={HEIGHT - 6} fontSize="10" className="fill-muted-foreground font-mono">
           {formatDateLabel(actualPoints[0].date)}

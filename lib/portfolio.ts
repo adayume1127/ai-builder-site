@@ -246,10 +246,13 @@ export function formatYen(n: number) {
 
 export type ChartGranularity = "month" | "halfYear" | "year";
 
+// 「単位」という表現は表示期間の切替(直近1ヶ月だけ表示、等)と誤解されやすいが、
+// 実際は表示期間を変えないサンプリング間隔の切替(何ヶ月ごとに1点をグラフに残すか)。
+// GPTレビューでの指摘を踏まえ、間隔であることが伝わる表現に変更した。
 export const GRANULARITY_LABELS: Record<ChartGranularity, string> = {
-  month: "月単位",
-  halfYear: "半年単位",
-  year: "年単位",
+  month: "月ごと",
+  halfYear: "6か月ごと",
+  year: "1年ごと",
 };
 
 export type PortfolioSettings = {

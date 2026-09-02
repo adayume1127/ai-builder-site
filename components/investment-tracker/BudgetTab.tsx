@@ -30,6 +30,37 @@ const NATURE_LABELS: Record<ExpenseNature, string> = {
   investment: "投資",
 };
 
+// 「記録の履歴」の表示専用ソート。保存データ(lib/household.ts側は常に日付昇順)は変更せず、
+// 表示のたびにコピーを並べ替えるだけ(元配列を破壊しない)。createdAt相当のフィールドが
+// データ上存在しないため、「新しい順」はあくまで取引日基準であることを文言でも明示する。
+type SortOrder = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
+
+const SORT_OPTIONS: { order: SortOrder; label: string }[] = [
+  { order: "date-desc", label: "日付: 新しい順" },
+  { order: "date-asc", label: "日付: 古い順" },
+  { order: "amount-desc", label: "金額: 高い順" },
+  { order: "amount-asc", label: "金額: 低い順" },
+];
+
+function sortTransactionsForDisplay(transactions: BudgetTransaction[], order: SortOrder): BudgetTransaction[] {
+  const copy = [...transactions];
+  switch (order) {
+    case "date-desc":
+      return copy.sort((a, b) => b.date.localeCompare(a.date));
+    case "date-asc":
+      return copy.sort((a, b) => a.date.localeCompare(b.date));
+    case "amount-desc":
+      return copy.sort((a, b) => b.amount - a.amount);
+    case "amount-asc":
+      return copy.sort((a, b) => a.amount - b.amount);
+  }
+}
+
+// タップ領域を最低44×44pxまで拡大しつつ、見た目の「×」自体は変えない(paddingではなく
+// min-h/min-w+中央揃えで確保する。負のマージンだと隣接要素との当たり判定が重なりうるため避けた)。
+const deleteButtonClass =
+  "inline-flex min-h-11 min-w-11 items-center justify-center text-muted-foreground hover:text-destructive";
+
 export function BudgetTab({
   categories,
   transactions,
@@ -74,6 +105,8 @@ export function BudgetTab({
 
   const [newCategoryLabel, setNewCategoryLabel] = useState("");
   const [newCategoryKind, setNewCategoryKind] = useState<BudgetCategoryKind>("expense");
+  // デフォルトは既存の表示順(新しい順、旧実装の[...transactions].reverse()と同じ結果)を踏襲する。
+  const [sortOrder, setSortOrder] = useState<SortOrder>("date-desc");
 
   const entryFormRef = useRef<HTMLDivElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
@@ -139,6 +172,14 @@ export function BudgetTab({
 
   function handleSaveGoal() {
     onSaveSavingsGoal(Number(savingsGoalInput) || 0);
+  }
+
+  // インライン一覧・履歴テーブルの両方から呼ぶ共通の削除ハンドラ。確認なしの即削除だった
+  // 挙動を、目標削除(page.tsx)と同じconfirm()パターンに揃える。2箇所に別々に書くと
+  // 片方だけ確認を忘れる等の挙動差が生まれるため、ここに一本化する。
+  function handleDeleteWithConfirm(id: string) {
+    if (!confirm("この記録を削除しますか？削除すると元に戻せません。")) return;
+    onDeleteTransaction(id);
   }
 
   function handleSaveBudget(categoryId: string, displayedValue: string) {
@@ -271,20 +312,23 @@ export function BudgetTab({
             {selectedDateTransactions.map((t) => {
               const isIncome = categories.find((c) => c.id === t.categoryId)?.kind === "income";
               return (
-                <div key={t.id} className="flex items-center justify-between font-mono text-xs">
-                  <span className="text-muted-foreground">{categoryLabelById.get(t.categoryId) ?? "-"}</span>
-                  <span className={isIncome ? "neon-text" : "neon-text-pink"}>
-                    {isIncome ? "+" : "-"}
-                    {formatYen(t.amount)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteTransaction(t.id)}
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="削除"
-                  >
-                    ×
-                  </button>
+                <div key={t.id} className="space-y-0.5">
+                  <div className="flex items-center justify-between font-mono text-xs">
+                    <span className="text-muted-foreground">{categoryLabelById.get(t.categoryId) ?? "-"}</span>
+                    <span className={isIncome ? "neon-text" : "neon-text-pink"}>
+                      {isIncome ? "+" : "-"}
+                      {formatYen(t.amount)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteWithConfirm(t.id)}
+                      className={deleteButtonClass}
+                      aria-label="削除"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {t.memo && <p className="line-clamp-1 font-mono text-[10px] text-muted-foreground">{t.memo}</p>}
                 </div>
               );
             })}
@@ -467,7 +511,21 @@ export function BudgetTab({
 
       {transactions.length > 0 && (
         <div className="space-y-2">
-          <h3 className="font-mono text-sm text-muted-foreground">記録の履歴</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-mono text-sm text-muted-foreground">記録の履歴</h3>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+              aria-label="表示順"
+              className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 font-mono text-[11px] text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.order} value={opt.order}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="overflow-x-auto rounded-xl border border-white/10">
             <table className="w-full font-mono text-xs">
               <thead>
@@ -480,7 +538,7 @@ export function BudgetTab({
                 </tr>
               </thead>
               <tbody>
-                {[...transactions].reverse().map((t) => {
+                {sortTransactionsForDisplay(transactions, sortOrder).map((t) => {
                   const isIncome = categories.find((c) => c.id === t.categoryId)?.kind === "income";
                   return (
                     <tr key={t.id} className="border-b border-white/5 last:border-0">
@@ -494,8 +552,8 @@ export function BudgetTab({
                       <td className="px-3 py-2 text-right">
                         <button
                           type="button"
-                          onClick={() => onDeleteTransaction(t.id)}
-                          className="text-muted-foreground hover:text-destructive"
+                          onClick={() => handleDeleteWithConfirm(t.id)}
+                          className={deleteButtonClass}
                           aria-label="削除"
                         >
                           ×
