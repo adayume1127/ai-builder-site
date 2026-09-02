@@ -77,6 +77,8 @@ function HistoryRow({
   );
 }
 
+const PAGE_SIZE = 6;
+
 export function MonthlyHistoryList({
   entries,
   selectedMonth,
@@ -86,15 +88,30 @@ export function MonthlyHistoryList({
   selectedMonth: string | null;
   onSelectMonth: (month: string) => void;
 }) {
+  // 履歴の表示件数と、月末レビューの対象月(selectedMonth)は独立したstateとして扱う。
+  // ◀/▶でselectedMonthが表示範囲外の月に移動しても、この一覧は自動で展開しない
+  // (「さらに表示」で追える。逆に、一覧側の操作でレビュー対象が勝手に変わることもない)。
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   if (entries.length === 0) return null;
+  const visibleEntries = entries.slice(0, visibleCount);
+  const remaining = entries.length - visibleEntries.length;
   return (
     <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
       <h3 className="font-mono text-sm text-muted-foreground">過去の実績</h3>
       <div className="space-y-1.5">
-        {entries.map((entry) => (
+        {visibleEntries.map((entry) => (
           <HistoryRow key={entry.month} entry={entry} selected={entry.month === selectedMonth} onSelectMonth={onSelectMonth} />
         ))}
       </div>
+      {remaining > 0 && (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
+          className="w-full rounded-lg border border-white/15 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:bg-white/5"
+        >
+          さらに過去を表示(残り{remaining}件)
+        </button>
+      )}
     </div>
   );
 }
