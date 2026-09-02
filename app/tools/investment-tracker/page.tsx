@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { RefreshCw } from "lucide-react";
+import { HelpCircle, RefreshCw } from "lucide-react";
 import { AchievementsTab } from "@/components/investment-tracker/AchievementsTab";
 import { AssetsTab } from "@/components/investment-tracker/AssetsTab";
 import { BottomNav, type TabKey } from "@/components/investment-tracker/BottomNav";
@@ -16,6 +16,8 @@ import { ReDiagnosisReflectChoice } from "@/components/investment-tracker/househ
 import { SpecialExpensePrompt } from "@/components/investment-tracker/household/SpecialExpensePrompt";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
+import { WelcomeOnboarding, type OnboardingChoice } from "@/components/investment-tracker/WelcomeOnboarding";
+import { loadOnboardingState, saveOnboardingState } from "@/lib/onboarding";
 import {
   createGoal,
   loadGoals,
@@ -152,26 +154,76 @@ export default function InvestmentTrackerPage() {
   const [reloading, setReloading] = useState(false);
   const [selectedReviewMonth, setSelectedReviewMonth] = useState<string | null>(null);
   const [investmentEntryRequestId, setInvestmentEntryRequestId] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    setGoals(loadGoals());
-    setSnapshots(loadSnapshots());
+    const loadedGoals = loadGoals();
+    const loadedSnapshots = loadSnapshots();
     const settings = loadPortfolioSettings();
+    const loadedTransactions = loadTransactions();
+    const loadedProfile = loadHouseholdProfile();
+    const loadedMonthlyBudgets = loadMonthlyBudgets();
+    setGoals(loadedGoals);
+    setSnapshots(loadedSnapshots);
     setTargetAmountYen(settings.targetAmountYen);
     setChartGranularity(settings.chartGranularity);
     setOpeningCashBalanceYen(settings.openingCashBalanceYen);
     setCategories(loadCategories());
-    setTransactions(loadTransactions());
+    setTransactions(loadedTransactions);
     setSavingsGoalYen(loadHouseholdSettings().monthlySavingsGoalYen);
-    setHouseholdProfile(loadHouseholdProfile());
+    setHouseholdProfile(loadedProfile);
     setSpecialExpenses(loadSpecialExpenses());
     setSpecialExpenseMode(loadHouseholdDiagnosisSettings().specialExpenseMode);
-    setMonthlyBudgets(loadMonthlyBudgets());
+    setMonthlyBudgets(loadedMonthlyBudgets);
     setMonthlyReviews(loadMonthlyReviews());
     setSpecialExpenseCandidates(loadSpecialExpenseCandidates());
     setResolvedPromptIds(loadResolvedSpecialExpensePromptIds());
+
+    // オンボーディングの既読判定は「見たかどうか」の専用フラグのみで行う(データの有無では
+    // 判定しない=見た後にデータを全部消しても再表示させない)。ただし、このフラグ自体が
+    // まだ一度も保存されていない状態(=既存ユーザーへ機能をリリースした直後)で、かつ
+    // 既に主要なデータが入っている場合は、「初めて開いた人向け」の趣旨に合わせて自動的に
+    // 既読扱いにする(そうしないとリリース直後に既存データを持つユーザーへ突然表示されてしまう)。
+    // openingCashBalanceYen(預金初期残高)はデフォルト値も0円のため、「未設定」と
+    // 「0円と明示設定」を区別できず利用実績の判定材料にできない。goals/snapshots/
+    // transactions/householdProfile/monthlyBudgetsは、いずれもユーザーが明示的に
+    // 金額・目標・家計情報を保存しない限り存在しないため、これらのみを見る。
+    const onboarding = loadOnboardingState();
+    const hasExistingData =
+      loadedGoals.length > 0 ||
+      loadedSnapshots.length > 0 ||
+      loadedTransactions.length > 0 ||
+      loadedProfile !== null ||
+      loadedMonthlyBudgets.length > 0;
+    if (!onboarding.hasSeenWelcome) {
+      if (hasExistingData) {
+        saveOnboardingState({ hasSeenWelcome: true });
+      } else {
+        setShowOnboarding(true);
+      }
+    }
+
     setLoaded(true);
   }, []);
+
+  function handleOnboardingChoose(choice: OnboardingChoice) {
+    saveOnboardingState({ hasSeenWelcome: true });
+    setShowOnboarding(false);
+    if (choice === "quest") {
+      setActiveTab("quest");
+      if (goals.length === 0) setFormMode({ type: "create" });
+    } else if (choice === "assets") {
+      setActiveTab("assets");
+    } else if (choice === "budget") {
+      setActiveTab("budget");
+    }
+    // "overview" はどのタブにも遷移させず、現在のホーム画面をそのまま見せる。
+  }
+
+  function handleOnboardingSkip() {
+    saveOnboardingState({ hasSeenWelcome: true });
+    setShowOnboarding(false);
+  }
 
   function persist(next: Goal[]) {
     setGoals(next);
@@ -552,6 +604,14 @@ export default function InvestmentTrackerPage() {
         </span>
         <button
           type="button"
+          onClick={() => setShowOnboarding(true)}
+          aria-label="ルナのはじめかたガイドを見る"
+          className="shrink-0 rounded-full border border-white/15 p-1.5 text-muted-foreground hover:bg-white/5 hover:text-foreground"
+        >
+          <HelpCircle className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
           onClick={() => {
             setReloading(true);
             window.location.reload();
@@ -562,6 +622,8 @@ export default function InvestmentTrackerPage() {
           <RefreshCw className={`h-3.5 w-3.5 ${reloading ? "animate-spin" : ""}`} />
         </button>
       </div>
+
+      {showOnboarding && <WelcomeOnboarding onChoose={handleOnboardingChoose} onSkip={handleOnboardingSkip} />}
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-2xl space-y-6 px-6 py-6">
