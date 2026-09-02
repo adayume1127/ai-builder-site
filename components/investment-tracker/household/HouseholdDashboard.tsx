@@ -62,6 +62,8 @@ export function HouseholdDashboard({
   transactions,
   month,
   monthlyHistoryEntries,
+  selectedReviewMonth,
+  onSelectReviewMonth,
   budgetSuggestions,
   specialReserveSuggestion,
   goalType,
@@ -76,6 +78,8 @@ export function HouseholdDashboard({
   transactions: BudgetTransaction[];
   month: string;
   monthlyHistoryEntries: MonthlyHistoryEntry[];
+  selectedReviewMonth: string | null;
+  onSelectReviewMonth: (month: string) => void;
   budgetSuggestions: BudgetAdjustmentSuggestion[];
   specialReserveSuggestion: { estimatedMonthlyReserve: number; annualTotal: number } | null;
   goalType: string | null;
@@ -229,7 +233,11 @@ export function HouseholdDashboard({
       </div>
 
       {/* 5-3. 過去の実績 */}
-      <MonthlyHistoryList entries={monthlyHistoryEntries} />
+      <MonthlyHistoryList
+        entries={monthlyHistoryEntries}
+        selectedMonth={selectedReviewMonth}
+        onSelectMonth={onSelectReviewMonth}
+      />
 
       {/* 5-4. 来月の予算のヒント(標準生活費学習・カテゴリ予算提案) */}
       <BudgetSuggestionCard suggestions={budgetSuggestions} onAdopt={onAdoptBudgetSuggestion} />

@@ -144,6 +144,7 @@ export default function InvestmentTrackerPage() {
   const [formMode, setFormMode] = useState<FormMode>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TabKey>("home");
   const [reloading, setReloading] = useState(false);
+  const [selectedReviewMonth, setSelectedReviewMonth] = useState<string | null>(null);
 
   useEffect(() => {
     setGoals(loadGoals());
@@ -348,6 +349,18 @@ export default function InvestmentTrackerPage() {
     saveMonthlyReviews(next);
   }
 
+  function handleNavigateReviewMonth(direction: "older" | "newer") {
+    const completedMonthsDesc = completedMonths(transactions, categories);
+    const currentMonth =
+      selectedReviewMonth && completedMonthsDesc.includes(selectedReviewMonth)
+        ? selectedReviewMonth
+        : completedMonthsDesc.find((m) => m !== nowMonth) ?? null;
+    if (!currentMonth) return;
+    const index = completedMonthsDesc.indexOf(currentMonth);
+    const nextMonth = direction === "older" ? completedMonthsDesc[index + 1] : completedMonthsDesc[index - 1];
+    if (nextMonth) setSelectedReviewMonth(nextMonth);
+  }
+
   function handleCreate(input: NewGoalInput) {
     persist([...goals, createGoal(input)]);
     setFormMode({ type: "closed" });
@@ -404,12 +417,19 @@ export default function InvestmentTrackerPage() {
   const estimatedMonthlySpecial = estimatedMonthlySpecialExpenseReserve(estimatedAnnualSpecial);
   const hasAnnualSpecialCandidate = specialExpenseCandidates.some((c) => c.recurrence === "annual");
 
-  // 月末レビューの対象月: 今月より前で、実績が十分にある直近の月(=先月)。
+  // 月末レビューの対象月: デフォルトは今月より前で実績が十分にある直近の月(=先月)。
+  // ユーザーが月次履歴から別の完了月を選ぶと selectedReviewMonth が優先される
+  // (データ変更でその月が完了月リストから外れた場合は自動でデフォルトへ戻す)。
   const completedMonthsDesc = completedMonths(transactions, categories);
-  const reviewTargetMonth = completedMonthsDesc.find((m) => m !== nowMonth) ?? null;
+  const latestReviewMonth = completedMonthsDesc.find((m) => m !== nowMonth) ?? null;
+  const reviewTargetMonth =
+    selectedReviewMonth && completedMonthsDesc.includes(selectedReviewMonth) ? selectedReviewMonth : latestReviewMonth;
   const reviewTargetIndex = reviewTargetMonth ? completedMonthsDesc.indexOf(reviewTargetMonth) : -1;
   const previousReviewMonth = reviewTargetIndex >= 0 ? completedMonthsDesc[reviewTargetIndex + 1] ?? null : null;
   const reviewTargetBudget = reviewTargetMonth ? getMonthlyBudget(monthlyBudgets, reviewTargetMonth) : null;
+  const isLatestReviewMonth = reviewTargetMonth === latestReviewMonth;
+  const hasOlderReviewMonth = reviewTargetIndex >= 0 && reviewTargetIndex < completedMonthsDesc.length - 1;
+  const hasNewerReviewMonth = reviewTargetIndex > 0;
   const householdNetYen = totalNetYen(transactions, categories);
   const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
   const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
@@ -536,6 +556,8 @@ export default function InvestmentTrackerPage() {
                   transactions={transactions}
                   month={nowMonth}
                   monthlyHistoryEntries={monthlyHistory(transactions, categories, monthlyReviews)}
+                  selectedReviewMonth={reviewTargetMonth}
+                  onSelectReviewMonth={(m) => setSelectedReviewMonth(m)}
                   budgetSuggestions={suggestBudgetAdjustments(transactions, categories, completedMonths(transactions, categories))}
                   specialReserveSuggestion={
                     hasAnnualSpecialCandidate ? { estimatedMonthlyReserve: estimatedMonthlySpecial, annualTotal: estimatedAnnualSpecial } : null
@@ -561,6 +583,11 @@ export default function InvestmentTrackerPage() {
                     previousMonthSurplus={previousReviewMonth ? monthlySurplus(transactions, categories, previousReviewMonth) : null}
                     review={getMonthlyReview(monthlyReviews, reviewTargetMonth)}
                     onSaveAllocation={(cash, special) => handleSaveMonthlyReviewAllocation(reviewTargetMonth, cash, special)}
+                    isLatest={isLatestReviewMonth}
+                    hasOlder={hasOlderReviewMonth}
+                    hasNewer={hasNewerReviewMonth}
+                    onNavigate={handleNavigateReviewMonth}
+                    onJumpToLatest={() => setSelectedReviewMonth(null)}
                   />
                 )}
                 {showDiagnosisDetail && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatYen } from "@/lib/portfolio";
 import { reviewNeedsReconciliation, type MonthlyReview } from "@/lib/monthlyReview";
 
@@ -20,6 +20,11 @@ export function MonthlyReviewCard({
   previousMonthSurplus,
   review,
   onSaveAllocation,
+  isLatest,
+  hasOlder,
+  hasNewer,
+  onNavigate,
+  onJumpToLatest,
 }: {
   month: string;
   actualIncome: number;
@@ -33,12 +38,27 @@ export function MonthlyReviewCard({
   previousMonthSurplus: number | null;
   review: MonthlyReview | null;
   onSaveAllocation: (allocatedToCashSavings: number, allocatedToSpecialReserve: number) => void;
+  isLatest: boolean;
+  hasOlder: boolean;
+  hasNewer: boolean;
+  onNavigate: (direction: "older" | "newer") => void;
+  onJumpToLatest: () => void;
 }) {
   const [showDetail, setShowDetail] = useState(false);
   const [showInvestmentNote, setShowInvestmentNote] = useState(false);
   const [cashInput, setCashInput] = useState(String(review?.allocatedToCashSavings ?? Math.max(monthlySurplus, 0)));
   const [specialInput, setSpecialInput] = useState(String(review?.allocatedToSpecialReserve ?? 0));
   const [saved, setSaved] = useState(false);
+
+  // monthが切り替わってもこのコンポーネント自体はアンマウントされないため、useStateの初期値
+  // (mount時のみ評価)だけでは古い月の下書きが残ってしまう。month(=表示対象の切り替え)を
+  // キーにドラフトを再同期する。
+  useEffect(() => {
+    setCashInput(String(review?.allocatedToCashSavings ?? Math.max(monthlySurplus, 0)));
+    setSpecialInput(String(review?.allocatedToSpecialReserve ?? 0));
+    setSaved(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month]);
 
   const allocatedCash = Number(cashInput) || 0;
   const allocatedSpecial = Number(specialInput) || 0;
@@ -57,7 +77,36 @@ export function MonthlyReviewCard({
 
   return (
     <div className="space-y-3 rounded-xl gold-border bg-white/5 p-4">
-      <p className="text-center font-mono text-xs text-muted-foreground">{month}のふりかえり</p>
+      <div className="flex items-center justify-between font-mono text-xs text-muted-foreground">
+        <button
+          type="button"
+          disabled={!hasOlder}
+          onClick={() => onNavigate("older")}
+          aria-label="前の月をレビュー"
+          className="rounded-full border border-white/15 px-2 py-1 hover:bg-white/5 disabled:opacity-30"
+        >
+          ◀
+        </button>
+        <span>{month}のふりかえり{!isLatest && "(過去)"}</span>
+        <button
+          type="button"
+          disabled={!hasNewer}
+          onClick={() => onNavigate("newer")}
+          aria-label="次の月をレビュー"
+          className="rounded-full border border-white/15 px-2 py-1 hover:bg-white/5 disabled:opacity-30"
+        >
+          ▶
+        </button>
+      </div>
+      {!isLatest && (
+        <button
+          type="button"
+          onClick={onJumpToLatest}
+          className="w-full font-mono text-[11px] text-muted-foreground underline hover:text-foreground"
+        >
+          最新の月に戻る
+        </button>
+      )}
 
       <div className="text-center">
         {monthlySurplus > 0 ? (
