@@ -145,6 +145,7 @@ export default function InvestmentTrackerPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("home");
   const [reloading, setReloading] = useState(false);
   const [selectedReviewMonth, setSelectedReviewMonth] = useState<string | null>(null);
+  const [investmentEntryRequestId, setInvestmentEntryRequestId] = useState(0);
 
   useEffect(() => {
     setGoals(loadGoals());
@@ -350,15 +351,19 @@ export default function InvestmentTrackerPage() {
   }
 
   function handleNavigateReviewMonth(direction: "older" | "newer") {
-    const completedMonthsDesc = completedMonths(transactions, categories);
+    // 今月は completedMonths() 上「実績十分」と判定され得ても、レビュー対象の候補には含めない
+    // (下の reviewableMonthsDesc 算出は render本体側と同じ考え方に揃える)。
+    const reviewableMonthsDesc = completedMonths(transactions, categories).filter((m) => m !== nowMonth);
     const currentMonth =
-      selectedReviewMonth && completedMonthsDesc.includes(selectedReviewMonth)
-        ? selectedReviewMonth
-        : completedMonthsDesc.find((m) => m !== nowMonth) ?? null;
+      selectedReviewMonth && reviewableMonthsDesc.includes(selectedReviewMonth) ? selectedReviewMonth : reviewableMonthsDesc[0] ?? null;
     if (!currentMonth) return;
-    const index = completedMonthsDesc.indexOf(currentMonth);
-    const nextMonth = direction === "older" ? completedMonthsDesc[index + 1] : completedMonthsDesc[index - 1];
+    const index = reviewableMonthsDesc.indexOf(currentMonth);
+    const nextMonth = direction === "older" ? reviewableMonthsDesc[index + 1] : reviewableMonthsDesc[index - 1];
     if (nextMonth) setSelectedReviewMonth(nextMonth);
+  }
+
+  function handleRequestInvestmentEntry() {
+    setInvestmentEntryRequestId((n) => n + 1);
   }
 
   function handleCreate(input: NewGoalInput) {
@@ -420,16 +425,21 @@ export default function InvestmentTrackerPage() {
   // 月末レビューの対象月: デフォルトは今月より前で実績が十分にある直近の月(=先月)。
   // ユーザーが月次履歴から別の完了月を選ぶと selectedReviewMonth が優先される
   // (データ変更でその月が完了月リストから外れた場合は自動でデフォルトへ戻す)。
+  // 今月も取引が5件以上あれば completedMonths() の判定上は「実績十分」になり得るが、
+  // 今月はまだ終わっていないため、レビュー対象の候補からは常に除外する
+  // (除外し忘れると◀/▶ナビゲーションで今月へ入り込めてしまうバグになる)。
   const completedMonthsDesc = completedMonths(transactions, categories);
-  const latestReviewMonth = completedMonthsDesc.find((m) => m !== nowMonth) ?? null;
+  const reviewableMonthsDesc = completedMonthsDesc.filter((m) => m !== nowMonth);
+  const latestReviewMonth = reviewableMonthsDesc[0] ?? null;
   const reviewTargetMonth =
-    selectedReviewMonth && completedMonthsDesc.includes(selectedReviewMonth) ? selectedReviewMonth : latestReviewMonth;
-  const reviewTargetIndex = reviewTargetMonth ? completedMonthsDesc.indexOf(reviewTargetMonth) : -1;
-  const previousReviewMonth = reviewTargetIndex >= 0 ? completedMonthsDesc[reviewTargetIndex + 1] ?? null : null;
+    selectedReviewMonth && reviewableMonthsDesc.includes(selectedReviewMonth) ? selectedReviewMonth : latestReviewMonth;
+  const reviewTargetIndex = reviewTargetMonth ? reviewableMonthsDesc.indexOf(reviewTargetMonth) : -1;
+  const previousReviewMonth = reviewTargetIndex >= 0 ? reviewableMonthsDesc[reviewTargetIndex + 1] ?? null : null;
   const reviewTargetBudget = reviewTargetMonth ? getMonthlyBudget(monthlyBudgets, reviewTargetMonth) : null;
   const isLatestReviewMonth = reviewTargetMonth === latestReviewMonth;
-  const hasOlderReviewMonth = reviewTargetIndex >= 0 && reviewTargetIndex < completedMonthsDesc.length - 1;
+  const hasOlderReviewMonth = reviewTargetIndex >= 0 && reviewTargetIndex < reviewableMonthsDesc.length - 1;
   const hasNewerReviewMonth = reviewTargetIndex > 0;
+  const investmentCategoryId = categories.find((c) => c.kind === "expense" && categoryNature(c) === "investment")?.id ?? null;
   const householdNetYen = totalNetYen(transactions, categories);
   const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
   const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
@@ -555,7 +565,7 @@ export default function InvestmentTrackerPage() {
                   categories={categories}
                   transactions={transactions}
                   month={nowMonth}
-                  monthlyHistoryEntries={monthlyHistory(transactions, categories, monthlyReviews)}
+                  monthlyHistoryEntries={monthlyHistory(transactions, categories, monthlyReviews).filter((e) => e.month !== nowMonth)}
                   selectedReviewMonth={reviewTargetMonth}
                   onSelectReviewMonth={(m) => setSelectedReviewMonth(m)}
                   budgetSuggestions={suggestBudgetAdjustments(transactions, categories, completedMonths(transactions, categories))}
@@ -588,6 +598,8 @@ export default function InvestmentTrackerPage() {
                     hasNewer={hasNewerReviewMonth}
                     onNavigate={handleNavigateReviewMonth}
                     onJumpToLatest={() => setSelectedReviewMonth(null)}
+                    onRequestInvestmentEntry={handleRequestInvestmentEntry}
+                    hasInvestmentCategory={investmentCategoryId !== null}
                   />
                 )}
                 {showDiagnosisDetail && (
@@ -630,6 +642,8 @@ export default function InvestmentTrackerPage() {
                     onSaveSavingsGoal={handleSaveSavingsGoal}
                     onSetCategoryBudget={handleSetCategoryBudget}
                     onSetCategoryNature={handleSetCategoryNature}
+                    investmentEntryRequestId={investmentEntryRequestId}
+                    investmentCategoryId={investmentCategoryId}
                   />
                 </div>
               </div>

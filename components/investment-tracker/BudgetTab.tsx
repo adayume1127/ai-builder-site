@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BudgetCalendar } from "./BudgetCalendar";
 import { SavingsTrendChart } from "./SavingsTrendChart";
@@ -41,6 +41,8 @@ export function BudgetTab({
   onSaveSavingsGoal,
   onSetCategoryBudget,
   onSetCategoryNature,
+  investmentEntryRequestId,
+  investmentCategoryId,
 }: {
   categories: BudgetCategory[];
   transactions: BudgetTransaction[];
@@ -52,6 +54,9 @@ export function BudgetTab({
   onSaveSavingsGoal: (value: number) => void;
   onSetCategoryBudget: (id: string, budgetYen: number) => void;
   onSetCategoryNature: (id: string, nature: ExpenseNature) => void;
+  // 月末レビューの「投資の記録を追加する」から呼ばれたときだけ増分される。0(初期値)では何もしない。
+  investmentEntryRequestId: number;
+  investmentCategoryId: string | null;
 }) {
   const [kind, setKind] = useState<BudgetCategoryKind>("expense");
   const expenseCategories = categories.filter((c) => c.kind === "expense");
@@ -69,6 +74,24 @@ export function BudgetTab({
 
   const [newCategoryLabel, setNewCategoryLabel] = useState("");
   const [newCategoryKind, setNewCategoryKind] = useState<BudgetCategoryKind>("expense");
+
+  const entryFormRef = useRef<HTMLDivElement>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
+  // 月末レビューの「投資の記録を追加する」ボタンから呼ばれたときだけ、支出/投資カテゴリを
+  // プリセレクトしてこのフォームまでスクロールする。0(初期値・未リクエスト)では何もしない。
+  // investmentCategoryIdをdepsに含めないのは意図的: 「カテゴリが変わったら追従する」のではなく
+  // 「リクエストが発生した瞬間の最新カテゴリを一度だけ使う」動作にするため。
+  useEffect(() => {
+    if (investmentEntryRequestId === 0) return;
+    setKind("expense");
+    // 投資分類のカテゴリが存在しない場合、直前に選択していた無関係なカテゴリ(食費など)を
+    // 残さない。空にすると「追加する」ボタンがdisabledになり、ユーザーがカテゴリを
+    // 意識的に選び直すまで誤ったカテゴリで記録されるのを防げる。
+    setCategoryId(investmentCategoryId ?? "");
+    entryFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    amountInputRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [investmentEntryRequestId]);
 
   const [savingsGoalInput, setSavingsGoalInput] = useState(savingsGoalYen ? String(savingsGoalYen) : "");
   // ユーザーが今まさに入力中の値だけを保持する(未編集のカテゴリは常にcategories側の最新値を表示する)。
@@ -233,7 +256,7 @@ export function BudgetTab({
         <SavingsTrendChart points={trend} />
       </div>
 
-      <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <div ref={entryFormRef} className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
         <h3 className="font-mono text-sm text-muted-foreground">記録を追加(日付をタッチして選択)</h3>
 
         <BudgetCalendar transactions={transactions} categories={categories} selectedDate={date} onSelectDate={setDate} />
@@ -291,7 +314,13 @@ export function BudgetTab({
 
         <div className="grid grid-cols-2 gap-2">
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass}>
-            {kindCategories.length === 0 && <option value="">カテゴリなし</option>}
+            {/* categoryIdが現在のkindCategoriesのどれとも一致しない場合(投資カテゴリ未作成時など)、
+                空文字のoption自体が無いとブラウザは前回選択されていた選択肢の表示を保持してしまう
+                (Reactのstateは""になってもDOM上の見た目が更新されない)。プレースホルダーを出して
+                見た目とstateを一致させ、「追加する」がdisabledな理由をユーザーにも分かるようにする。 */}
+            {(kindCategories.length === 0 || !kindCategories.some((c) => c.id === categoryId)) && (
+              <option value="">{kindCategories.length === 0 ? "カテゴリなし" : "カテゴリを選択してください"}</option>
+            )}
             {kindCategories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.label}
@@ -299,6 +328,7 @@ export function BudgetTab({
             ))}
           </select>
           <input
+            ref={amountInputRef}
             type="number"
             inputMode="decimal"
             value={amount}

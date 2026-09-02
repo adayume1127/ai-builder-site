@@ -25,6 +25,8 @@ export function MonthlyReviewCard({
   hasNewer,
   onNavigate,
   onJumpToLatest,
+  onRequestInvestmentEntry,
+  hasInvestmentCategory,
 }: {
   month: string;
   actualIncome: number;
@@ -43,9 +45,10 @@ export function MonthlyReviewCard({
   hasNewer: boolean;
   onNavigate: (direction: "older" | "newer") => void;
   onJumpToLatest: () => void;
+  onRequestInvestmentEntry: () => void;
+  hasInvestmentCategory: boolean;
 }) {
   const [showDetail, setShowDetail] = useState(false);
-  const [showInvestmentNote, setShowInvestmentNote] = useState(false);
   const [cashInput, setCashInput] = useState(String(review?.allocatedToCashSavings ?? Math.max(monthlySurplus, 0)));
   const [specialInput, setSpecialInput] = useState(String(review?.allocatedToSpecialReserve ?? 0));
   const [saved, setSaved] = useState(false);
@@ -171,17 +174,18 @@ export function MonthlyReviewCard({
           <div className="space-y-1 rounded-lg border border-white/10 bg-white/[0.02] p-2">
             <button
               type="button"
-              onClick={() => setShowInvestmentNote((v) => !v)}
+              onClick={onRequestInvestmentEntry}
               className="w-full rounded-lg border border-white/15 px-2 py-1.5 font-mono text-[11px] text-muted-foreground hover:bg-white/5"
             >
-              投資へ
+              投資の記録を追加する ▾
             </button>
-            {showInvestmentNote && (
-              <p className="font-mono text-[10px] text-muted-foreground">
-                投資に回す場合は、家計簿の記録で「投資」に分類したカテゴリの支出として登録してください。登録した時点で預金残高から差し引かれます。
-                ※投資取引は資産タブの投資評価額には自動反映されません。実際に投資したら資産タブでも金額を更新しましょう。
-              </p>
-            )}
+            <p className="font-mono text-[10px] text-muted-foreground">
+              {hasInvestmentCategory
+                ? "下の家計簿の記録フォームが開きます(「投資」に分類したカテゴリが自動で選択されます)。"
+                : "下の家計簿の記録フォームが開きます。カテゴリ管理で「投資」に分類したカテゴリを選んで登録してください。"}
+              登録した時点で預金残高から差し引かれます。
+              ※投資取引は資産タブの投資評価額には自動反映されません。実際に投資したら資産タブでも金額を更新しましょう。
+            </p>
           </div>
 
           <button
