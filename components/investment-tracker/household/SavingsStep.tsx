@@ -7,7 +7,11 @@ import type { HouseholdProfile } from "@/lib/householdDiagnosis";
 const inputClass =
   "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]";
 
-const EMERGENCY_OPTIONS: HouseholdProfile["emergencyFundMonths"][] = [3, 6, 12];
+const EMERGENCY_OPTIONS: { months: HouseholdProfile["emergencyFundMonths"]; note: string }[] = [
+  { months: 3, note: "まずはここから(初期設定)" },
+  { months: 6, note: "もう少し余裕を持って備えたい場合" },
+  { months: 12, note: "収入の変動などに備えて、厚めに確保したい場合" },
+];
 
 export function SavingsStep({
   value,
@@ -92,19 +96,24 @@ export function SavingsStep({
         />
       </div>
 
-      <div className="space-y-1.5">
-        <label className="font-mono text-xs text-muted-foreground">生活防衛資金の目標(何ヶ月分の生活費を備えるか)</label>
-        <div className="flex gap-2">
-          {EMERGENCY_OPTIONS.map((m) => (
+      <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <label className="font-mono text-xs text-muted-foreground">もしものためのお金(生活防衛資金)</label>
+        <p className="text-[10px] text-muted-foreground">
+          病気や仕事が変わったときなど、収入が減っても、しばらく生活できるように残しておく貯金です。
+          何ヶ月分の生活費を目安に貯めておきたいか選んでください。迷ったら、まず3ヶ月分から設定できます。あとから変更できます。
+        </p>
+        <div className="space-y-1.5 pt-1">
+          {EMERGENCY_OPTIONS.map((o) => (
             <button
-              key={m}
+              key={o.months}
               type="button"
-              onClick={() => setMonths(m)}
-              className={`flex-1 rounded-lg px-3 py-2 font-mono text-sm ${
-                months === m ? "neon-border neon-text" : "border border-white/15 text-muted-foreground"
+              onClick={() => setMonths(o.months)}
+              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-mono text-sm ${
+                months === o.months ? "neon-border neon-text" : "border border-white/15 text-muted-foreground"
               }`}
             >
-              {m}ヶ月
+              <span>{o.months}ヶ月分</span>
+              <span className="text-[10px]">{o.note}</span>
             </button>
           ))}
         </div>

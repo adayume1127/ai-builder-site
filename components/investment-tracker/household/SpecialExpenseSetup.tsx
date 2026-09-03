@@ -59,7 +59,7 @@ export function SpecialExpenseSetup({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        毎月の生活費とは別に発生する「年間特別費」(旅行・帰省・車検・冠婚葬祭など)は、どのくらい把握できていますか?
+        毎月ではない、たまに出ていく大きな出費(旅行・帰省・車検・冠婚葬祭など)は、どのくらい把握できていますか?
       </p>
 
       <div className="grid grid-cols-1 gap-2">
@@ -142,7 +142,7 @@ export function SpecialExpenseSetup({
           戻る
         </Button>
         <Button type="button" className="flex-1" onClick={() => onFinish(localMode, localItems)}>
-          診断する
+          診断結果を見る
         </Button>
       </div>
     </div>

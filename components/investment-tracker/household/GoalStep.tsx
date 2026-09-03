@@ -67,6 +67,7 @@ export function GoalStep({
 
       {type && !noGoal && (
         <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+          <p className="text-[10px] text-muted-foreground">分かるところだけで大丈夫。あとから変更できます。</p>
           <div className="space-y-1">
             <label className="font-mono text-xs text-muted-foreground">目標金額(円・任意)</label>
             <input

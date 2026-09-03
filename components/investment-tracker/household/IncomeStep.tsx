@@ -34,6 +34,9 @@ export function IncomeStep({
   const legacyAnnualBonus = value.annualBonus ?? 0;
   // 既存のannualBonusから自動生成はしない(支給月が分からないため)。ユーザーが手動で追加する。
   const [bonusPayments, setBonusPayments] = useState<BonusPaymentDraft[]>(toBonusPaymentDrafts(value.bonusPayments ?? []));
+  // 複数行の年月+金額入力は最初のステップにしては重いため、既存データが無い限り
+  // 初期状態では折りたたんでおく(GPTとのPDCA Cycle2)。
+  const [showBonusSection, setShowBonusSection] = useState(bonusPayments.length > 0);
 
   function addBonusPayment() {
     setBonusPayments((prev) => [...prev, { month: "", amount: "" }]);
@@ -99,46 +102,64 @@ export function IncomeStep({
       )}
 
       <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-        <label className="font-mono text-xs text-muted-foreground">ボーナスの支給予定(任意)</label>
-        <p className="text-[10px] text-muted-foreground">
-          支給予定の年月と金額を登録すると、貯金目標の「目標達成プラン」に反映できます
-          (毎月の生活費計算には含めません)。
-        </p>
-        {bonusPayments.map((p, i) => (
-          <div key={i} className="flex items-center gap-1.5">
-            <input
-              type="month"
-              value={p.month}
-              onChange={(e) => updateBonusPayment(i, "month", e.target.value)}
-              className={`${inputClass} py-1.5 text-xs`}
-              aria-label="支給予定年月"
-            />
-            <input
-              type="number"
-              inputMode="decimal"
-              value={p.amount}
-              onChange={(e) => updateBonusPayment(i, "amount", e.target.value)}
-              placeholder="金額(円)"
-              className={`${inputClass} py-1.5 text-xs`}
-              aria-label="支給予定額"
-            />
+        {showBonusSection ? (
+          <>
+            <label className="font-mono text-xs text-muted-foreground">ボーナスの支給予定(任意)</label>
+            <p className="text-[10px] text-muted-foreground">
+              支給予定の年月と金額を登録すると、貯金目標の「目標達成プラン」に反映できます
+              (毎月の生活費計算には含めません)。
+            </p>
+            {bonusPayments.map((p, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <input
+                  type="month"
+                  value={p.month}
+                  onChange={(e) => updateBonusPayment(i, "month", e.target.value)}
+                  className={`${inputClass} py-1.5 text-xs`}
+                  aria-label="支給予定年月"
+                />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={p.amount}
+                  onChange={(e) => updateBonusPayment(i, "amount", e.target.value)}
+                  placeholder="金額(円)"
+                  className={`${inputClass} py-1.5 text-xs`}
+                  aria-label="支給予定額"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeBonusPayment(i)}
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  aria-label="この支給予定を削除"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
             <button
               type="button"
-              onClick={() => removeBonusPayment(i)}
-              className="shrink-0 text-muted-foreground hover:text-destructive"
-              aria-label="この支給予定を削除"
+              onClick={addBonusPayment}
+              className="w-full rounded-lg border border-white/15 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:bg-white/5"
             >
-              ×
+              + 支給予定を追加
             </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={addBonusPayment}
-          className="w-full rounded-lg border border-white/15 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:bg-white/5"
-        >
-          + 支給予定を追加
-        </button>
+          </>
+        ) : (
+          <>
+            <label className="font-mono text-xs text-muted-foreground">ボーナスの予定はありますか？(任意)</label>
+            <p className="text-[10px] text-muted-foreground">
+              目標の計画をより正確にできます。あとからでも登録できるので、今は飛ばしても大丈夫です。
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowBonusSection(true)}
+              className="w-full rounded-lg border border-white/15 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:bg-white/5"
+            >
+              + ボーナス予定を登録する
+            </button>
+          </>
+        )}
       </div>
 
       <Button type="button" className="w-full" onClick={handleNext}>
