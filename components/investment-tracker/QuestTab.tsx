@@ -98,6 +98,7 @@ export function QuestTab({
             <GoalCard
               key={goal.id}
               goal={goal}
+              goalCount={goals.length}
               portfolioAssetsMan={portfolioAssetsMan}
               onUpdate={onUpdate}
               onEdit={() => onEditOpen(goal.id)}

@@ -157,18 +157,29 @@ export function actualAnnualRate(actual: Goal["actual"]): number | null {
   return rate * 100;
 }
 
-// 現在の資産額。資産タブで記録した総資産(万円)があればそれを優先し、
-// なければ実績評価額 → 投資元本+貯金 の順にフォールバックする。
-export function currentAssetsMan(goal: Goal, portfolioAssetsMan: number | null = null): number {
-  if (portfolioAssetsMan !== null) return portfolioAssetsMan;
+// この目標の「現在の資産」として扱う値。資産タブの総資産(portfolioAssetsMan)は家計全体で
+// 1つしかない値のため、複数の目標にそのまま渡すと、同じ資産が複数の目標の達成根拠として
+// 重複計上されてしまう(例: 総資産500万円 → 目標額30万円の目標も、目標額200万円の目標も、
+// どちらも単独で「達成」扱いになる)。目標が1件だけのときに限り、従来通り資産タブとの連携
+// (portfolioAssetsManをそのまま現在資産として扱う)を維持する互換ルールとし、2件以上ある
+// ときは各目標自身の入力値(実績記録があればそちらを優先、なければ投資元本+貯金)に
+// フォールバックする(GPTとのPDCA相談で確定)。progressRatio・達成判定など、この目標の
+// 「現在資産」を必要とする箇所は必ずこの関数を経由し、判定を分散させないこと。
+export function effectiveCurrentAssetsMan(
+  goal: Goal,
+  goalCount: number,
+  portfolioAssetsMan: number | null = null
+): number {
+  if (goalCount === 1 && portfolioAssetsMan !== null) return portfolioAssetsMan;
   return goal.actual.currentValueMan ?? goal.investedMan + goal.savingsMan;
 }
 
-// 現在の資産 ÷ 目標額。0〜1にクランプ
-export function progressRatio(goal: Goal, portfolioAssetsMan: number | null = null): number {
+// 現在の資産 ÷ 目標額。0〜1にクランプ。currentAssetsManValueは呼び出し側が
+// effectiveCurrentAssetsMan()で解決した値を渡すこと(このAPI単体では複数目標の
+// 重複計上を防げない)。
+export function progressRatio(goal: Goal, currentAssetsManValue: number): number {
   if (!Number.isFinite(goal.goalMan) || goal.goalMan <= 0) return 0;
-  const currentAssets = currentAssetsMan(goal, portfolioAssetsMan);
-  return Math.min(1, Math.max(0, currentAssets / goal.goalMan));
+  return Math.min(1, Math.max(0, currentAssetsManValue / goal.goalMan));
 }
 
 export type Level = { level: number; title: string };
@@ -247,7 +258,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: "goal-achieved",
     title: "目標達成",
     description: "いずれかの目標を100%達成する",
-    check: (goals, portfolioAssetsMan) => goals.some((g) => progressRatio(g, portfolioAssetsMan ?? null) >= 1),
+    check: (goals, portfolioAssetsMan) =>
+      goals.some((g) => progressRatio(g, effectiveCurrentAssetsMan(g, goals.length, portfolioAssetsMan ?? null)) >= 1),
   },
 ];
 

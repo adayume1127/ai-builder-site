@@ -8,7 +8,7 @@ import { ProgressBar } from "./ProgressBar";
 import { ActualReturnForm } from "./ActualReturnForm";
 import {
   actualAnnualRate,
-  currentAssetsMan,
+  effectiveCurrentAssetsMan,
   formatMan,
   formatYearsMonths,
   levelForProgress,
@@ -28,12 +28,16 @@ const PACE_LABEL: Record<string, { text: string; className: string }> = {
 
 export function GoalCard({
   goal,
+  goalCount,
   portfolioAssetsMan = null,
   onUpdate,
   onEdit,
   onDelete,
 }: {
   goal: Goal;
+  // 目標の総数。資産タブの総資産(portfolioAssetsMan)を現在資産として使ってよいのは
+  // 目標が1件だけのときに限る(複数目標での重複計上を防ぐため)。
+  goalCount: number;
   portfolioAssetsMan?: number | null;
   onUpdate: (goal: Goal) => void;
   onEdit: () => void;
@@ -41,13 +45,14 @@ export function GoalCard({
 }) {
   const [showActualForm, setShowActualForm] = useState(false);
 
-  const ratio = progressRatio(goal, portfolioAssetsMan);
+  const usesPortfolioTotal = goalCount === 1 && portfolioAssetsMan !== null;
+  const currentAssets = effectiveCurrentAssetsMan(goal, goalCount, portfolioAssetsMan);
+  const ratio = progressRatio(goal, currentAssets);
   const level = levelForProgress(ratio);
   const required = requiredMonthlyPayment(goal);
   const projected = projectedFutureValue(goal);
   const pace = paceStatus(goal);
   const rate = actualAnnualRate(goal.actual);
-  const currentAssets = currentAssetsMan(goal, portfolioAssetsMan);
   const paceInfo = PACE_LABEL[pace];
 
   return (
@@ -80,8 +85,14 @@ export function GoalCard({
               <span className="text-muted-foreground text-xs">現在の資産</span>
               <span>{formatMan(currentAssets)}</span>
             </div>
-            {portfolioAssetsMan !== null && (
+            {usesPortfolioTotal ? (
               <span className="text-right text-[9px] text-muted-foreground">資産タブの記録より</span>
+            ) : (
+              portfolioAssetsMan !== null && (
+                <span className="text-right text-[9px] text-muted-foreground">
+                  この目標の入力値(他にも目標があるため、資産タブの総資産は使いません)
+                </span>
+              )
             )}
           </div>
           <div className="flex items-center justify-between">

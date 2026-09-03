@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LunaCoach } from "./LunaCoach";
 import { PortfolioPieChart } from "./PortfolioPieChart";
 import {
+  effectiveCurrentAssetsMan,
   levelForProgress,
   paceStatus,
   playerRank,
@@ -44,7 +45,9 @@ export function HomeTab({
         message: "まだ目標がないみたい。老後資金でも旅行資金でもOK、まずは1つ作ってみよう🌙",
       };
     }
-    const achievedGoal = goals.find((g) => progressRatio(g, portfolioAssetsMan) >= 1);
+    const achievedGoal = goals.find(
+      (g) => progressRatio(g, effectiveCurrentAssetsMan(g, goals.length, portfolioAssetsMan)) >= 1
+    );
     if (achievedGoal) {
       return {
         variant: "celebrate" as const,
@@ -127,7 +130,7 @@ export function HomeTab({
         <div className="space-y-2">
           <h2 className="font-mono text-sm text-muted-foreground">クエスト進捗</h2>
           {goals.map((goal) => {
-            const ratio = progressRatio(goal, portfolioAssetsMan);
+            const ratio = progressRatio(goal, effectiveCurrentAssetsMan(goal, goals.length, portfolioAssetsMan));
             const level = levelForProgress(ratio);
             return (
               <button
