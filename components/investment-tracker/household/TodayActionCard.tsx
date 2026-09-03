@@ -29,7 +29,7 @@ export function TodayActionCard({
 
   return (
     <div className="space-y-2 rounded-2xl gold-border bg-white/5 p-4">
-      <p className="font-mono text-xs text-muted-foreground">🌙 今日のアクション</p>
+      <p className="font-mono text-xs text-muted-foreground">🌙 今日やること</p>
       <p className="text-sm font-bold">{action.headline}</p>
       <p className="text-xs text-muted-foreground">{action.detail}</p>
 

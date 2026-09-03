@@ -132,7 +132,17 @@ export function HouseholdDashboard({
 
   return (
     <div className="space-y-4">
-      {/* 1. 今月あと使えるお金(最重要) */}
+      {/* 1. 今日やること(最優先)。「これだけ見れば次に何をすればいいか分かる」が最優先の
+          目的のため、数字のサマリーより上に置く(GPTとのPDCA Cycle1)。 */}
+      <TodayActionCard
+        action={todayAction}
+        cashSavingsStatus={cashSavingsStatus}
+        cashSavingsAmountYen={cashSavingsAmountYen}
+        plannedCashSavings={summary.plannedCashSavings}
+        onUpdateCashSavings={onUpdateCashSavingsAction}
+      />
+
+      {/* 2. 今月あと使えるお金 */}
       <div className="gold-border space-y-1 rounded-2xl bg-white/5 p-5 text-center">
         <p className="font-mono text-xs text-muted-foreground">今月あと使えるお金</p>
         <p className={`font-mono text-4xl font-bold ${summary.remainingSpendable >= 0 ? "gold-text" : "text-destructive"}`}>
@@ -145,18 +155,10 @@ export function HouseholdDashboard({
         )}
       </div>
 
-      <TodayActionCard
-        action={todayAction}
-        cashSavingsStatus={cashSavingsStatus}
-        cashSavingsAmountYen={cashSavingsAmountYen}
-        plannedCashSavings={summary.plannedCashSavings}
-        onUpdateCashSavings={onUpdateCashSavingsAction}
-      />
-
       <LunaCoach variant={luna.variant} message={luna.message} />
       <HouseholdGuidanceButton guidance={guidance} onAction={onGuidanceAction} />
 
-      {/* 2. 月末予想 */}
+      {/* 3. 月末予想 */}
       <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 font-mono">
         <span className="text-xs text-muted-foreground">月末予想</span>
         <span className={`text-lg font-bold ${summary.projectedMonthEndBalance >= 0 ? "neon-text" : "text-destructive"}`}>
@@ -165,7 +167,7 @@ export function HouseholdDashboard({
         </span>
       </div>
 
-      {/* 3. 貯金予定・投資予定 */}
+      {/* 4. 貯金予定・投資予定 */}
       <div className="grid grid-cols-2 gap-2 text-center font-mono">
         <div className="rounded-lg border border-white/15 bg-white/5 p-2">
           <p className="text-[10px] text-muted-foreground">現金貯金の予定</p>
@@ -177,7 +179,7 @@ export function HouseholdDashboard({
         </div>
       </div>
 
-      {/* 3-2. 特別費: 確保額に対する使用状況(確保額の範囲内なら生活費を圧迫しない、超過分だけ影響する) */}
+      {/* 4-2. 特別費: 確保額に対する使用状況(確保額の範囲内なら生活費を圧迫しない、超過分だけ影響する) */}
       <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono">
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs">
           <span className="shrink-0 text-muted-foreground">特別費(旅行・帰省など)</span>
@@ -206,7 +208,7 @@ export function HouseholdDashboard({
         </p>
       </div>
 
-      {/* 4. カテゴリ予算(変動費のみ) */}
+      {/* 5. カテゴリ予算(変動費のみ) */}
       {variableBudgetStatuses.length > 0 && (
         <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
           <h3 className="font-mono text-sm text-muted-foreground">カテゴリ予算</h3>
@@ -230,7 +232,7 @@ export function HouseholdDashboard({
         </div>
       )}
 
-      {/* 5. 最近の支出 */}
+      {/* 6. 最近の支出 */}
       {recentTransactions.length > 0 && (
         <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3">
           <h3 className="font-mono text-sm text-muted-foreground">最近の支出</h3>
@@ -251,7 +253,7 @@ export function HouseholdDashboard({
         </div>
       )}
 
-      {/* 5-2. 今月の予算ペース */}
+      {/* 6-2. 今月の予算ペース */}
       <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono">
         <div className="flex items-center justify-between text-xs">
           <h3 className="text-muted-foreground">今月の予算ペース</h3>
@@ -270,17 +272,17 @@ export function HouseholdDashboard({
         <p className="text-[11px] text-muted-foreground">{PACE_MESSAGE[summary.spendingPace]}</p>
       </div>
 
-      {/* 5-3. 過去の実績 */}
+      {/* 6-3. 過去の実績 */}
       <MonthlyHistoryList
         entries={monthlyHistoryEntries}
         selectedMonth={selectedReviewMonth}
         onSelectMonth={onSelectReviewMonth}
       />
 
-      {/* 5-4. 来月の予算のヒント(標準生活費学習・カテゴリ予算提案) */}
+      {/* 6-4. 来月の予算のヒント(標準生活費学習・カテゴリ予算提案) */}
       <BudgetSuggestionCard suggestions={budgetSuggestions} onAdopt={onAdoptBudgetSuggestion} />
 
-      {/* 5-5. 特別費積立の見直し提案(特別費候補から学習した年間見込み) */}
+      {/* 6-5. 特別費積立の見直し提案(特別費候補から学習した年間見込み) */}
       {specialReserveSuggestion && (
         <SpecialReserveSuggestionCard
           estimatedMonthlyReserve={specialReserveSuggestion.estimatedMonthlyReserve}
@@ -290,7 +292,7 @@ export function HouseholdDashboard({
         />
       )}
 
-      {/* 5-6. 目標達成プランの参照カード(「今月あと使えるお金」とは別枠、数値は混ぜない) */}
+      {/* 6-6. 目標達成プランの参照カード(「今月あと使えるお金」とは別枠、数値は混ぜない) */}
       {goalFundingPlan && goalFundingPlan.goalRemaining > 0 && (
         <div className="space-y-1 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono text-xs">
           <p className="text-muted-foreground">🎯 目標「{goalType}」まであと{formatYen(goalFundingPlan.goalRemaining)}</p>
@@ -302,7 +304,7 @@ export function HouseholdDashboard({
         </div>
       )}
 
-      {/* 6. 補助情報・導線 */}
+      {/* 7. 補助情報・導線 */}
       <div className="flex gap-2 font-mono text-xs">
         <button
           type="button"

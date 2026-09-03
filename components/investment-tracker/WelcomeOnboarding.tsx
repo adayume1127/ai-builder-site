@@ -2,35 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export type OnboardingChoice = "quest" | "assets" | "budget" | "overview";
-
-const CHOICES: { choice: OnboardingChoice; emoji: string; label: string }[] = [
-  { choice: "quest", emoji: "🗺️", label: "貯金・投資の目標を決めたい" },
-  { choice: "assets", emoji: "💰", label: "今の資産を整理したい" },
-  { choice: "budget", emoji: "📒", label: "家計を診断したい" },
-  { choice: "overview", emoji: "🏠", label: "まず全体を見てみる" },
-];
-
-// ルナが最初に1問だけ聞き、選んだ内容に応じて該当タブへ案内するだけの軽量な入口。
-// 実際の入力操作は各タブの既存UI(QuestTabのGoalForm・HouseholdSetup等)にそのまま任せ、
-// ここでステップ管理や進捗保存は持たない(汎用チュートリアルエンジンにしない設計方針)。
+// ルナが最初に1つだけ行動を促し、家計診断へ案内するだけの軽量な入口。
+// 以前は「目標/資産/家計/全体」の4択だったが、初心者には「どれを選べばいいか分からない」
+// という新たな判断を強いてしまうため撤廃した(GPTとのPDCA Cycle1)。資産タブやクエストタブは
+// 消えておらず、下部タブからいつでも行ける。ここでは「まず何をすればいいか」を
+// アプリ側が決め切ることを優先する。
 export function WelcomeOnboarding({
-  onChoose,
+  onStart,
   onSkip,
 }: {
-  onChoose: (choice: OnboardingChoice) => void;
+  onStart: () => void;
   onSkip: () => void;
 }) {
   const [avatarOk, setAvatarOk] = useState(true);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const firstChoiceRef = useRef<HTMLButtonElement>(null);
+  const startButtonRef = useRef<HTMLButtonElement>(null);
   // 開く直前にフォーカスしていた要素を覚えておき、閉じたら戻す。「？」ボタンから手動で
   // 開いた場合はそのボタンへ、初回自動表示(トリガーなし)の場合はbody等へ戻るだけで実害はない。
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-    firstChoiceRef.current?.focus();
+    startButtonRef.current?.focus();
 
     // aria-modal="true"を名乗る以上、Tabで背後の要素にフォーカスが抜けないようにする
     // (見た目はoverlayで操作不能に見えても、キーボード操作では背後を触れてしまうのを防ぐ)。
@@ -84,24 +77,20 @@ export function WelcomeOnboarding({
           )}
           <div className="space-y-1">
             <p className="font-mono text-xs text-muted-foreground">ルナ</p>
-            <p className="text-sm">積立クエストへようこそ！まず、何から始めたい？</p>
+            <p className="text-sm">
+              まず、毎月いくら貯められそうか調べよう。ルナが順番に聞くから、分かるところだけ答えてね。
+            </p>
           </div>
         </div>
 
-        <div className="space-y-2">
-          {CHOICES.map((c, i) => (
-            <button
-              key={c.choice}
-              ref={i === 0 ? firstChoiceRef : undefined}
-              type="button"
-              onClick={() => onChoose(c.choice)}
-              className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-left text-sm hover:bg-white/5"
-            >
-              <span>{c.emoji}</span>
-              <span>{c.label}</span>
-            </button>
-          ))}
-        </div>
+        <button
+          ref={startButtonRef}
+          type="button"
+          onClick={onStart}
+          className="w-full rounded-xl gold-border gold-text px-4 py-3 text-center text-base font-bold"
+        >
+          はじめる
+        </button>
 
         <button
           type="button"

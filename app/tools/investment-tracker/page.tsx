@@ -16,7 +16,7 @@ import { ReDiagnosisReflectChoice } from "@/components/investment-tracker/househ
 import { SpecialExpensePrompt } from "@/components/investment-tracker/household/SpecialExpensePrompt";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
-import { WelcomeOnboarding, type OnboardingChoice } from "@/components/investment-tracker/WelcomeOnboarding";
+import { WelcomeOnboarding } from "@/components/investment-tracker/WelcomeOnboarding";
 import { loadOnboardingState, saveOnboardingState } from "@/lib/onboarding";
 import {
   createGoal,
@@ -216,18 +216,14 @@ export default function InvestmentTrackerPage() {
     setLoaded(true);
   }, []);
 
-  function handleOnboardingChoose(choice: OnboardingChoice) {
+  // 初回オンボーディングの主導線。以前は4択で行き先を選ばせていたが、初心者には
+  // 「どれを選べばいいか分からない」という新たな判断になっていたため、家計診断へ
+  // 一本道で案内する形に統一した(GPTとのPDCA Cycle1)。資産タブ・クエストタブは
+  // 消えていないので、下部タブからいつでも行ける。
+  function handleOnboardingStart() {
     saveOnboardingState({ hasSeenWelcome: true });
     setShowOnboarding(false);
-    if (choice === "quest") {
-      setActiveTab("quest");
-      if (goals.length === 0) setFormMode({ type: "create" });
-    } else if (choice === "assets") {
-      setActiveTab("assets");
-    } else if (choice === "budget") {
-      setActiveTab("budget");
-    }
-    // "overview" はどのタブにも遷移させず、現在のホーム画面をそのまま見せる。
+    setActiveTab("budget");
   }
 
   function handleOnboardingSkip() {
@@ -659,7 +655,7 @@ export default function InvestmentTrackerPage() {
         </button>
       </div>
 
-      {showOnboarding && <WelcomeOnboarding onChoose={handleOnboardingChoose} onSkip={handleOnboardingSkip} />}
+      {showOnboarding && <WelcomeOnboarding onStart={handleOnboardingStart} onSkip={handleOnboardingSkip} />}
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-2xl space-y-6 px-6 py-6">
