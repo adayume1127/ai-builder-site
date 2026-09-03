@@ -36,6 +36,7 @@ export const DEFAULT_CATEGORIES: BudgetCategory[] = [
   { id: "salary", label: "給与", kind: "income", isDefault: true },
   { id: "other-income", label: "その他収入", kind: "income", isDefault: true },
   { id: "food", label: "食費", kind: "expense", isDefault: true, nature: "variable" },
+  { id: "dining-out", label: "外食費", kind: "expense", isDefault: true, nature: "variable" },
   { id: "housing", label: "家賃・住居費", kind: "expense", isDefault: true, nature: "fixed" },
   { id: "utilities", label: "光熱費", kind: "expense", isDefault: true, nature: "fixed" },
   { id: "communication", label: "通信費", kind: "expense", isDefault: true, nature: "fixed" },
@@ -63,6 +64,7 @@ const TRANSACTIONS_KEY = "investment-tracker:budget-transactions:v1";
 
 const SPECIAL_EXPENSE_CATEGORY: BudgetCategory = DEFAULT_CATEGORIES.find((c) => c.id === "special-expense")!;
 const INVESTMENT_CATEGORY: BudgetCategory = DEFAULT_CATEGORIES.find((c) => c.id === "investment")!;
+const DINING_OUT_CATEGORY: BudgetCategory = DEFAULT_CATEGORIES.find((c) => c.id === "dining-out")!;
 
 // 既存ユーザーが保存済みのカテゴリ配列には「特別費」カテゴリが無いため、読み込み時に1件だけ補う軽量マイグレーション。
 // 取引データ(BudgetTransaction)には一切触れない。
@@ -80,6 +82,17 @@ function withInvestmentCategory(categories: BudgetCategory[]): BudgetCategory[] 
   return hasInvestment ? categories : [...categories, INVESTMENT_CATEGORY];
 }
 
+// 「外食費」は既存の「食費」と同じnature("variable")を共有するため、特別費・投資と違い
+// natureの有無では判定できない。id、または既にユーザーが同じ意図で作った可能性のある
+// 同名ラベルの有無で判定する(それでも完全な重複防止はできない)。なお外食費はisDefault: true
+// で定義しているため、deleteCategory()・BudgetTabの削除ボタンいずれの経路でも削除できない
+// (特別費・投資と同じ既存の保護)。「食費」自体の再定義・改名は行わない(既存ユーザーの
+// 「食費」ラベルを断りなく書き換えないため)。
+function withDiningOutCategory(categories: BudgetCategory[]): BudgetCategory[] {
+  const hasDiningOut = categories.some((c) => c.id === "dining-out" || c.label === "外食費");
+  return hasDiningOut ? categories : [...categories, DINING_OUT_CATEGORY];
+}
+
 export function loadCategories(): BudgetCategory[] {
   if (typeof window === "undefined") return DEFAULT_CATEGORIES;
   try {
@@ -87,7 +100,7 @@ export function loadCategories(): BudgetCategory[] {
     if (!raw) return DEFAULT_CATEGORIES;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_CATEGORIES;
-    return withInvestmentCategory(withSpecialExpenseCategory(parsed));
+    return withDiningOutCategory(withInvestmentCategory(withSpecialExpenseCategory(parsed)));
   } catch {
     return DEFAULT_CATEGORIES;
   }
