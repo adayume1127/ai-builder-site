@@ -885,7 +885,6 @@ export default function InvestmentTrackerPage() {
               portfolioAssetsMan={portfolioAssetsMan}
               transactions={transactions}
               categories={categories}
-              plannedCashSavingsYen={currentMonthlyBudget?.plannedCashSavings ?? 0}
               hasAdoptedBudget={currentMonthlyBudget !== null}
               hasInvestmentRecord={latestPortfolio !== null}
               nowMonth={nowMonth}

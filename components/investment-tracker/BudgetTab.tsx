@@ -141,7 +141,6 @@ export function BudgetTab({
     expenseYen: 0,
     savingsYen: 0,
   };
-  const savingsGoalRatio = plannedCashSavingsYen > 0 ? thisMonth.savingsYen / plannedCashSavingsYen : null;
   const budgetStatuses = categoryBudgetStatusForMonth(transactions, categories, currentMonth);
   const overBudgetCount = budgetStatuses.filter((b) => b.overBudget).length;
 
@@ -205,7 +204,7 @@ export function BudgetTab({
             <p className="neon-text-pink text-sm font-bold">{formatYen(thisMonth.expenseYen)}</p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground">今月の貯金</p>
+            <p className="text-[10px] text-muted-foreground">今月の収支</p>
             <p className={`text-sm font-bold ${thisMonth.savingsYen >= 0 ? "gold-text" : "text-destructive"}`}>
               {formatYen(thisMonth.savingsYen)}
             </p>
@@ -214,32 +213,18 @@ export function BudgetTab({
 
         <div className="space-y-1 border-t border-white/10 pt-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">今月の先取り貯金</span>
+            <span className="text-muted-foreground">今月の貯金プラン</span>
             <span className="text-muted-foreground">
               {plannedCashSavingsYen > 0 ? (
-                <>
-                  {formatYen(plannedCashSavingsYen)}のうち{" "}
-                  <span className={savingsGoalRatio! >= 1 ? "gold-text font-bold" : "neon-text font-bold"}>
-                    {Math.round((savingsGoalRatio ?? 0) * 100)}%
-                  </span>
-                </>
+                <span className="gold-text font-bold">{formatYen(plannedCashSavingsYen)}</span>
               ) : (
                 "今月の予算で0円に設定されています"
               )}
             </span>
           </div>
-          {plannedCashSavingsYen > 0 && (
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-              <div
-                className={`h-full rounded-full ${
-                  savingsGoalRatio! >= 1
-                    ? "bg-gradient-to-r from-[#FFD700] to-[#fff7cc]"
-                    : "bg-gradient-to-r from-[oklch(0.85_0.22_195)] to-[oklch(0.85_0.22_330)]"
-                }`}
-                style={{ width: `${Math.max(0, Math.min(100, Math.round((savingsGoalRatio ?? 0) * 100)))}%` }}
-              />
-            </div>
-          )}
+          {/* 「収支」はあくまで記録済み取引の差額であり、この金額を実際に貯金へ回せたかは
+              このアプリでは確認できない。そのため計画額を事実として示すだけにとどめ、
+              達成率・進捗バー等の「達成した」という演出は付けない。 */}
           <p className="text-[10px] text-muted-foreground">
             金額は上の「今月の予算を編集」から調整できます。
           </p>
@@ -377,7 +362,7 @@ export function BudgetTab({
       )}
 
       <div className="space-y-2">
-        <h3 className="font-mono text-sm text-muted-foreground">貯金額推移</h3>
+        <h3 className="font-mono text-sm text-muted-foreground">累計収支の推移</h3>
         <SavingsTrendChart points={trend} />
       </div>
 

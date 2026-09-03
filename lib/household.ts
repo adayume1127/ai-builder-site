@@ -275,15 +275,20 @@ export function categoryBudgetStatusForMonth(
 // (Cycle3)が生む MonthlyBudget.plannedCashSavings と意味が重複し、2つの「貯金目標」が
 // 食い違いうる状態になっていた。今月採用済みのMonthlyBudget.plannedCashSavingsを
 // 唯一の基準にする(GPTとのPDCA Cycle4)。
+//
+// 以前は「先取り貯金額を、収支の実績(savingsYen = 収入-支出)で100%達成」という
+// ステップもあったが、savingsYenは記録した取引の単純な差額にすぎず、「実際に
+// 貯金として確保できたか」をこのアプリは観測できていない。月初に収入だけ記録した
+// 段階で不当に「達成🎉」と出てしまう等、入力順序によって結果が変わる問題があったため、
+// このアプリが確認できていないことを確認できたかのように見せないよう、
+// 「達成」判定そのものを撤去した(GPTとのPDCA Cycle5)。
 
 export type MoneyQuestContext = {
   transactions: BudgetTransaction[];
   categories: BudgetCategory[];
-  // 今月採用済みのMonthlyBudget.plannedCashSavings(未採用の月は0)。
-  plannedCashSavingsYen: number;
   // 今月、MonthlyBudgetを採用済みか。赤字家計時はルナが先取り貯金0円を正しくおすすめすることがあり、
-  // その場合plannedCashSavingsYenは0になるが「プランを決めていない」わけではない。「決めた」ことの
-  // 判定にはplannedCashSavingsYen > 0ではなくこちらを使う(GPT実装レビューでの指摘、Cycle4)。
+  // その場合でも「プランを決めていない」わけではない。「決めた」ことの判定には金額の正負ではなく
+  // こちらを使う(GPT実装レビューでの指摘、Cycle4)。
   hasAdoptedBudget: boolean;
   nowMonth: string; // YYYY-MM
   hasInvestmentRecord: boolean; // 資産タブで最低1回、記録を保存しているか
@@ -339,16 +344,6 @@ export const MONEY_QUEST_STAGE1: MoneyQuestStep[] = [
     check: (ctx) => {
       const summary = monthlySummaries(ctx.transactions, ctx.categories).find((s) => s.month === ctx.nowMonth);
       return (summary?.savingsYen ?? 0) > 0;
-    },
-  },
-  {
-    id: "goal-achieved",
-    title: "目標達成",
-    description: "今月の先取り貯金額を、今月の実績で100%達成しよう。",
-    check: (ctx) => {
-      if (ctx.plannedCashSavingsYen <= 0) return false;
-      const summary = monthlySummaries(ctx.transactions, ctx.categories).find((s) => s.month === ctx.nowMonth);
-      return (summary?.savingsYen ?? 0) >= ctx.plannedCashSavingsYen;
     },
   },
   {

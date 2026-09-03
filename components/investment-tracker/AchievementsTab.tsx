@@ -13,7 +13,6 @@ export function AchievementsTab({
   portfolioAssetsMan,
   transactions,
   categories,
-  plannedCashSavingsYen,
   hasAdoptedBudget,
   hasInvestmentRecord,
   nowMonth,
@@ -22,8 +21,6 @@ export function AchievementsTab({
   portfolioAssetsMan: number | null;
   transactions: BudgetTransaction[];
   categories: BudgetCategory[];
-  // 今月採用済みのMonthlyBudget.plannedCashSavings(未採用なら0)。
-  plannedCashSavingsYen: number;
   // 今月、MonthlyBudgetを採用済みか(0円のプランを正しく採用した場合と未採用を区別するため)。
   hasAdoptedBudget: boolean;
   hasInvestmentRecord: boolean;
@@ -32,7 +29,6 @@ export function AchievementsTab({
   const completion = moneyQuestCompletion({
     transactions,
     categories,
-    plannedCashSavingsYen,
     hasAdoptedBudget,
     nowMonth,
     hasInvestmentRecord,

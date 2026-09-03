@@ -47,7 +47,7 @@ export function SavingsTrendChart({ points }: { points: SavingsTrendPoint[] }) {
   if (points.length === 0) {
     return (
       <p className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-6 text-center text-xs text-muted-foreground">
-        収入・支出を記録すると、貯金額の推移グラフが表示されます。
+        収入・支出を記録すると、収支の推移グラフが表示されます。
       </p>
     );
   }
@@ -156,7 +156,7 @@ export function SavingsTrendChart({ points }: { points: SavingsTrendPoint[] }) {
             </span>
           </>
         ) : (
-          "グラフをなぞると各月の貯金額を確認できます"
+          "グラフをなぞると各月の収支を確認できます"
         )}
       </p>
     </div>
