@@ -328,7 +328,7 @@ export function BudgetTab({
         </Button>
         {lastAddedInvestment && (
           <p className="rounded-lg border border-white/10 bg-white/[0.02] px-2.5 py-2 text-[11px] text-muted-foreground">
-            この取引は資産タブの投資評価額には自動反映されません。実際に投資したら資産タブでも金額を更新しましょう。
+            投資の記録は、資産タブの投資評価額には自動反映されません。投資後に資産タブで現在の評価額を更新すると、資産合計にも反映されます。それまでは預金だけが先に減るため、資産合計が一時的に少なく見えることがあります。
           </p>
         )}
       </div>
