@@ -268,40 +268,23 @@ export function categoryBudgetStatusForMonth(
     });
 }
 
-// ===== 家計簿の設定(月間貯金目標) =====
-
-export type HouseholdSettings = { monthlySavingsGoalYen: number };
-
-const HOUSEHOLD_SETTINGS_KEY = "investment-tracker:household-settings:v1";
-
-export function loadHouseholdSettings(): HouseholdSettings {
-  const fallback: HouseholdSettings = { monthlySavingsGoalYen: 0 };
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = window.localStorage.getItem(HOUSEHOLD_SETTINGS_KEY);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return { monthlySavingsGoalYen: Number(parsed?.monthlySavingsGoalYen) || 0 };
-  } catch {
-    return fallback;
-  }
-}
-
-export function saveHouseholdSettings(settings: HouseholdSettings) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(HOUSEHOLD_SETTINGS_KEY, JSON.stringify(settings));
-  } catch {
-    // 保存できない場合は諦める
-  }
-}
-
 // ===== マネークエスト(実績タブ): 貯金体質を作るまでのステージ1 =====
+//
+// 「貯金目標」は以前、この機能専用にHouseholdSettings.monthlySavingsGoalYenという
+// 独立した手動入力を持っていたが、家計診断→ルナの診断結果→採用という一本道フロー
+// (Cycle3)が生む MonthlyBudget.plannedCashSavings と意味が重複し、2つの「貯金目標」が
+// 食い違いうる状態になっていた。今月採用済みのMonthlyBudget.plannedCashSavingsを
+// 唯一の基準にする(GPTとのPDCA Cycle4)。
 
 export type MoneyQuestContext = {
   transactions: BudgetTransaction[];
   categories: BudgetCategory[];
-  savingsGoalYen: number;
+  // 今月採用済みのMonthlyBudget.plannedCashSavings(未採用の月は0)。
+  plannedCashSavingsYen: number;
+  // 今月、MonthlyBudgetを採用済みか。赤字家計時はルナが先取り貯金0円を正しくおすすめすることがあり、
+  // その場合plannedCashSavingsYenは0になるが「プランを決めていない」わけではない。「決めた」ことの
+  // 判定にはplannedCashSavingsYen > 0ではなくこちらを使う(GPT実装レビューでの指摘、Cycle4)。
+  hasAdoptedBudget: boolean;
   nowMonth: string; // YYYY-MM
   hasInvestmentRecord: boolean; // 資産タブで最低1回、記録を保存しているか
 };
@@ -333,9 +316,9 @@ export const MONEY_QUEST_STAGE1: MoneyQuestStep[] = [
   },
   {
     id: "savings-goal",
-    title: "貯金目標を立てる",
-    description: "毎月いくら貯めたいか、貯金目標額を設定しよう。「先取り貯金」の第一歩。",
-    check: (ctx) => ctx.savingsGoalYen > 0,
+    title: "今月の先取り貯金プランを決める",
+    description: "家計簿タブの「今月の予算」で、今月いくら先取り貯金するか決めよう。",
+    check: (ctx) => ctx.hasAdoptedBudget,
   },
   {
     id: "category-budget",
@@ -361,11 +344,11 @@ export const MONEY_QUEST_STAGE1: MoneyQuestStep[] = [
   {
     id: "goal-achieved",
     title: "目標達成",
-    description: "設定した貯金目標を、今月の実績で100%達成しよう。",
+    description: "今月の先取り貯金額を、今月の実績で100%達成しよう。",
     check: (ctx) => {
-      if (ctx.savingsGoalYen <= 0) return false;
+      if (ctx.plannedCashSavingsYen <= 0) return false;
       const summary = monthlySummaries(ctx.transactions, ctx.categories).find((s) => s.month === ctx.nowMonth);
-      return (summary?.savingsYen ?? 0) >= ctx.savingsGoalYen;
+      return (summary?.savingsYen ?? 0) >= ctx.plannedCashSavingsYen;
     },
   },
   {

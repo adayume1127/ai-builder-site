@@ -63,12 +63,11 @@ const deleteButtonClass =
 export function BudgetTab({
   categories,
   transactions,
-  savingsGoalYen,
+  plannedCashSavingsYen,
   onAddTransaction,
   onDeleteTransaction,
   onAddCategory,
   onDeleteCategory,
-  onSaveSavingsGoal,
   onSetCategoryBudget,
   onSetCategoryNature,
   investmentEntryRequestId,
@@ -76,12 +75,13 @@ export function BudgetTab({
 }: {
   categories: BudgetCategory[];
   transactions: BudgetTransaction[];
-  savingsGoalYen: number;
+  // 今月採用済みのMonthlyBudget.plannedCashSavings(未採用なら0)。この画面では編集しない
+  // (編集は家計簿タブの「今月の予算」経由。ここは実績との比較だけを行う)。
+  plannedCashSavingsYen: number;
   onAddTransaction: (input: Omit<BudgetTransaction, "id">) => void;
   onDeleteTransaction: (id: string) => void;
   onAddCategory: (label: string, kind: BudgetCategoryKind) => void;
   onDeleteCategory: (id: string) => void;
-  onSaveSavingsGoal: (value: number) => void;
   onSetCategoryBudget: (id: string, budgetYen: number) => void;
   onSetCategoryNature: (id: string, nature: ExpenseNature) => void;
   // 月末レビューの「投資の記録を追加する」から呼ばれたときだけ増分される。0(初期値)では何もしない。
@@ -106,6 +106,8 @@ export function BudgetTab({
   const [newCategoryKind, setNewCategoryKind] = useState<BudgetCategoryKind>("expense");
   // デフォルトは既存の表示順(新しい順、旧実装の[...transactions].reverse()と同じ結果)を踏襲する。
   const [sortOrder, setSortOrder] = useState<SortOrder>("date-desc");
+  // 毎日の記録作業とは性質が違う管理操作なので、初期状態では折りたたんでおく(Cycle4)。
+  const [showCategoryManagement, setShowCategoryManagement] = useState(false);
 
   const entryFormRef = useRef<HTMLDivElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
@@ -125,7 +127,6 @@ export function BudgetTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [investmentEntryRequestId]);
 
-  const [savingsGoalInput, setSavingsGoalInput] = useState(savingsGoalYen ? String(savingsGoalYen) : "");
   // ユーザーが今まさに入力中の値だけを保持する(未編集のカテゴリは常にcategories側の最新値を表示する)。
   // これにより、BudgetSuggestionCardの「採用」など他の操作でmonthlyBudgetYenが変わった場合も
   // ここの表示が古いままにならない。
@@ -140,7 +141,7 @@ export function BudgetTab({
     expenseYen: 0,
     savingsYen: 0,
   };
-  const savingsGoalRatio = savingsGoalYen > 0 ? thisMonth.savingsYen / savingsGoalYen : null;
+  const savingsGoalRatio = plannedCashSavingsYen > 0 ? thisMonth.savingsYen / plannedCashSavingsYen : null;
   const budgetStatuses = categoryBudgetStatusForMonth(transactions, categories, currentMonth);
   const overBudgetCount = budgetStatuses.filter((b) => b.overBudget).length;
 
@@ -167,10 +168,6 @@ export function BudgetTab({
     if (!label) return;
     onAddCategory(label, newCategoryKind);
     setNewCategoryLabel("");
-  }
-
-  function handleSaveGoal() {
-    onSaveSavingsGoal(Number(savingsGoalInput) || 0);
   }
 
   // インライン一覧・履歴テーブルの両方から呼ぶ共通の削除ハンドラ。確認なしの即削除だった
@@ -217,21 +214,21 @@ export function BudgetTab({
 
         <div className="space-y-1 border-t border-white/10 pt-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">貯金目標</span>
+            <span className="text-muted-foreground">今月の先取り貯金</span>
             <span className="text-muted-foreground">
-              {savingsGoalYen > 0 ? (
+              {plannedCashSavingsYen > 0 ? (
                 <>
-                  達成率{" "}
+                  {formatYen(plannedCashSavingsYen)}のうち{" "}
                   <span className={savingsGoalRatio! >= 1 ? "gold-text font-bold" : "neon-text font-bold"}>
                     {Math.round((savingsGoalRatio ?? 0) * 100)}%
                   </span>
                 </>
               ) : (
-                "未設定"
+                "今月の予算で0円に設定されています"
               )}
             </span>
           </div>
-          {savingsGoalYen > 0 && (
+          {plannedCashSavingsYen > 0 && (
             <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
               <div
                 className={`h-full rounded-full ${
@@ -243,60 +240,13 @@ export function BudgetTab({
               />
             </div>
           )}
-          <div className="flex gap-2 pt-1">
-            <input
-              type="number"
-              inputMode="decimal"
-              value={savingsGoalInput}
-              onChange={(e) => setSavingsGoalInput(e.target.value)}
-              placeholder="毎月の貯金目標(円)"
-              className={inputClass}
-            />
-            <button
-              type="button"
-              onClick={handleSaveGoal}
-              className="shrink-0 rounded-lg gold-border gold-text px-3 py-1.5 font-mono text-xs"
-            >
-              設定
-            </button>
-          </div>
+          <p className="text-[10px] text-muted-foreground">
+            金額は上の「今月の予算を編集」から調整できます。
+          </p>
         </div>
       </div>
 
-      {budgetStatuses.length > 0 && (
-        <div
-          className={`space-y-2 rounded-xl border p-3 ${
-            overBudgetCount > 0 ? "border-destructive/50 bg-destructive/10" : "border-white/10 bg-white/[0.02]"
-          }`}
-        >
-          <h3 className="font-mono text-sm text-muted-foreground">
-            今月の予算{overBudgetCount > 0 && <span className="text-destructive font-bold"> ⚠ {overBudgetCount}件が予算超過</span>}
-          </h3>
-          {budgetStatuses.map((b) => (
-            <div key={b.category.id} className="space-y-1">
-              <div className="flex items-center justify-between font-mono text-xs">
-                <span className="text-muted-foreground">{b.category.label}</span>
-                <span className={b.overBudget ? "text-destructive font-bold" : "text-muted-foreground"}>
-                  {formatYen(b.spentYen)} / {formatYen(b.budgetYen)}
-                </span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                <div
-                  className={`h-full rounded-full ${b.overBudget ? "bg-destructive" : "bg-[oklch(0.85_0.22_195)]"}`}
-                  style={{ width: `${Math.min(100, Math.round(b.ratio * 100))}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <h3 className="font-mono text-sm text-muted-foreground">貯金額推移</h3>
-        <SavingsTrendChart points={trend} />
-      </div>
-
-      <div ref={entryFormRef} className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <div ref={entryFormRef} className="space-y-3 rounded-xl gold-border bg-white/5 p-3">
         <h3 className="font-mono text-sm text-muted-foreground">記録を追加(日付をタッチして選択)</h3>
 
         <BudgetCalendar transactions={transactions} categories={categories} selectedDate={date} onSelectDate={setDate} />
@@ -398,8 +348,50 @@ export function BudgetTab({
         )}
       </div>
 
+      {budgetStatuses.length > 0 && (
+        <div
+          className={`space-y-2 rounded-xl border p-3 ${
+            overBudgetCount > 0 ? "border-destructive/50 bg-destructive/10" : "border-white/10 bg-white/[0.02]"
+          }`}
+        >
+          <h3 className="font-mono text-sm text-muted-foreground">
+            今月の予算{overBudgetCount > 0 && <span className="text-destructive font-bold"> ⚠ {overBudgetCount}件が予算超過</span>}
+          </h3>
+          {budgetStatuses.map((b) => (
+            <div key={b.category.id} className="space-y-1">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="text-muted-foreground">{b.category.label}</span>
+                <span className={b.overBudget ? "text-destructive font-bold" : "text-muted-foreground"}>
+                  {formatYen(b.spentYen)} / {formatYen(b.budgetYen)}
+                </span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className={`h-full rounded-full ${b.overBudget ? "bg-destructive" : "bg-[oklch(0.85_0.22_195)]"}`}
+                  style={{ width: `${Math.min(100, Math.round(b.ratio * 100))}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <h3 className="font-mono text-sm text-muted-foreground">貯金額推移</h3>
+        <SavingsTrendChart points={trend} />
+      </div>
+
       <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-        <h3 className="font-mono text-sm text-muted-foreground">カテゴリ管理</h3>
+        <button
+          type="button"
+          onClick={() => setShowCategoryManagement((v) => !v)}
+          className="flex w-full items-center justify-between font-mono text-sm text-muted-foreground"
+        >
+          <span>カテゴリ管理</span>
+          <span className="text-xs">{showCategoryManagement ? "閉じる ▲" : "開く ▼"}</span>
+        </button>
+        {showCategoryManagement && (
+          <>
 
         <div className="space-y-2">
           <p className="text-[10px] text-muted-foreground">
@@ -506,6 +498,8 @@ export function BudgetTab({
             追加
           </button>
         </div>
+          </>
+        )}
       </div>
 
       {transactions.length > 0 && (

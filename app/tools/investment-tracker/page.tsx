@@ -48,14 +48,12 @@ import {
   categoryBudgetStatusForMonth,
   categoryNature,
   loadCategories,
-  loadHouseholdSettings,
   loadTransactions,
   monthKey,
   monthlySummaries,
   removeCategory,
   removeTransaction,
   saveCategories,
-  saveHouseholdSettings,
   saveTransactions,
   setCategoryBudget,
   setCategoryNature,
@@ -141,7 +139,6 @@ export default function InvestmentTrackerPage() {
   const [openingCashBalanceYen, setOpeningCashBalanceYen] = useState(0);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [transactions, setTransactions] = useState<BudgetTransaction[]>([]);
-  const [savingsGoalYen, setSavingsGoalYen] = useState(0);
   const [householdProfile, setHouseholdProfile] = useState<HouseholdProfile | null>(null);
   const [specialExpenses, setSpecialExpenses] = useState<SpecialExpense[]>([]);
   const [specialExpenseMode, setSpecialExpenseMode] = useState<SpecialExpenseMode>("unknown");
@@ -185,7 +182,6 @@ export default function InvestmentTrackerPage() {
     setOpeningCashBalanceYen(settings.openingCashBalanceYen);
     setCategories(loadCategories());
     setTransactions(loadedTransactions);
-    setSavingsGoalYen(loadHouseholdSettings().monthlySavingsGoalYen);
     setHouseholdProfile(loadedProfile);
     setSpecialExpenses(loadSpecialExpenses());
     setSpecialExpenseMode(loadHouseholdDiagnosisSettings().specialExpenseMode);
@@ -302,11 +298,6 @@ export default function InvestmentTrackerPage() {
     saveCategories(next);
   }
 
-  function handleSaveSavingsGoal(value: number) {
-    setSavingsGoalYen(value);
-    saveHouseholdSettings({ monthlySavingsGoalYen: value });
-  }
-
   function handleSetCategoryBudget(id: string, budgetYen: number) {
     const next = setCategoryBudget(categories, id, budgetYen);
     setCategories(next);
@@ -366,10 +357,10 @@ export default function InvestmentTrackerPage() {
     setMonthlyBudgets(next);
     saveMonthlyBudgets(next);
     setEditingBudget(false);
-    // 初回採用時のみ、既存の「毎月の貯金目標」(マネークエスト・BudgetTabの進捗バーが参照)にも同期する。
-    // 以降は今月の予算(MonthlyBudget)と貯金目標を独立して編集できる。
+    // 「毎月の貯金目標」(マネークエスト・BudgetTabの達成率表示)は、以前は独立した手動値
+    // (HouseholdSettings.monthlySavingsGoalYen)を持っていたが、採用済みMonthlyBudget.
+    // plannedCashSavingsを直接参照するように変更した(Cycle4)。ここでの同期処理は不要になった。
     if (isFirstAdoption) {
-      handleSaveSavingsGoal(values.plannedCashSavings);
       // ダッシュボードに移った直後、「次は今日やることへ」という短い橋渡しを1回だけ見せる(Cycle3)。
       setShowAdoptionCelebration(true);
     }
@@ -875,12 +866,11 @@ export default function InvestmentTrackerPage() {
                   <BudgetTab
                     categories={categories}
                     transactions={transactions}
-                    savingsGoalYen={savingsGoalYen}
+                    plannedCashSavingsYen={currentMonthlyBudget?.plannedCashSavings ?? 0}
                     onAddTransaction={handleAddTransaction}
                     onDeleteTransaction={handleDeleteTransaction}
                     onAddCategory={handleAddCategory}
                     onDeleteCategory={handleDeleteCategory}
-                    onSaveSavingsGoal={handleSaveSavingsGoal}
                     onSetCategoryBudget={handleSetCategoryBudget}
                     onSetCategoryNature={handleSetCategoryNature}
                     investmentEntryRequestId={investmentEntryRequestId}
@@ -895,7 +885,8 @@ export default function InvestmentTrackerPage() {
               portfolioAssetsMan={portfolioAssetsMan}
               transactions={transactions}
               categories={categories}
-              savingsGoalYen={savingsGoalYen}
+              plannedCashSavingsYen={currentMonthlyBudget?.plannedCashSavings ?? 0}
+              hasAdoptedBudget={currentMonthlyBudget !== null}
               hasInvestmentRecord={latestPortfolio !== null}
               nowMonth={nowMonth}
             />
