@@ -64,7 +64,10 @@ export function BudgetPlanAdopt({
   goalFundingPlan: GoalFundingPlan | null;
 }) {
   const baseline = previousBudget ?? diagnosisRecommendation;
-  const [showEditor, setShowEditor] = useState(variant !== "rollover");
+  // initial/rolloverは、まず「選んだ/おすすめのプラン」をそのまま確認してもらい、必要な人だけ
+  // 編集フォームを開く(Cycle3: ゼロから5項目を編集させるのではなく、提案の確認をベースにする)。
+  // editは今月すでに採用済みの金額を直接編集する画面なので、最初から開いておく。
+  const [showEditor, setShowEditor] = useState(variant === "edit");
   const [draft, setDraft] = useState<Record<DraftKey, string>>(() => toDraft(baseline));
 
   function resetTo(source: RecommendedMonthlyBudget) {
@@ -151,6 +154,33 @@ export function BudgetPlanAdopt({
         >
           家計診断のおすすめ額に戻す
         </button>
+      )}
+
+      {variant === "initial" && !showEditor && (
+        <div className="space-y-3 rounded-xl gold-border bg-white/5 p-4">
+          <h3 className="gold-text font-mono text-sm font-bold">今月のプラン(確認)</h3>
+          <div className="space-y-1.5">
+            {FIELD_LABELS.map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between font-mono text-sm">
+                <span className="text-xs text-muted-foreground">{label}</span>
+                <span>{formatYen(Number(draft[key]) || 0)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between border-t border-white/10 pt-2 font-mono text-xs">
+            <span className="text-muted-foreground">今月あと使えるお金(自由費込み)</span>
+            <span className={`font-bold ${monthlySpendable >= 0 ? "gold-text" : "text-destructive"}`}>
+              {formatYen(monthlySpendable)}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowEditor(true)}
+            className="w-full rounded-lg border border-white/15 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:bg-white/5"
+          >
+            金額を調整する
+          </button>
+        </div>
       )}
 
       {showEditor && (

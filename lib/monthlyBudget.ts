@@ -20,6 +20,7 @@ import {
   recommendationMode,
   totalIncome as diagnosisTotalIncome,
   type HouseholdProfile,
+  type SavingsPlanTier,
   type SpecialExpense,
   type SpecialExpenseMode,
 } from "@/lib/householdDiagnosis";
@@ -255,19 +256,23 @@ function splitRecommendedSavings(profile: HouseholdProfile, standardSavings: num
   return { cash: standardSavings - investment, investment };
 }
 
-// 家計診断(lib/householdDiagnosis.ts)の推奨貯金プラン(標準プラン)をベースに、今月のおすすめ予算案を組み立てる。
+// 家計診断(lib/householdDiagnosis.ts)の推奨貯金プランをベースに、今月のおすすめ予算案を組み立てる。
 // この時点ではまだMonthlyBudgetとして保存しない(ユーザーが採用/編集して初めてMonthlyBudgetになる)。
+// tier: 安全/標準/チャレンジのどのプランをベースにするか(Cycle3の診断結果画面での選択に対応)。
+// 省略時は"standard"(既存呼び出し元の挙動は変わらない)。
 export function recommendMonthlyBudget(
   profile: HouseholdProfile,
   specialExpenses: SpecialExpense[],
-  specialExpenseMode: SpecialExpenseMode
+  specialExpenseMode: SpecialExpenseMode,
+  tier: SavingsPlanTier = "standard"
 ): RecommendedMonthlyBudget {
   const income = diagnosisTotalIncome(profile);
   const specialExpenseReserve = monthlySpecialExpenseReserve(profile, specialExpenses, specialExpenseMode);
   const available = availableForSavings(profile, specialExpenseReserve);
   const plans = computeSavingsPlans(available, profile.confidence.livingExpenses);
-  const standardSavings = recommendationMode(available) === "cashflow_recovery" ? 0 : plans.standardSavings;
-  const { cash, investment } = splitRecommendedSavings(profile, standardSavings);
+  const tierSavings = { safe: plans.safeSavings, standard: plans.standardSavings, challenge: plans.challengeSavings }[tier];
+  const savingsAmount = recommendationMode(available) === "cashflow_recovery" ? 0 : tierSavings;
+  const { cash, investment } = splitRecommendedSavings(profile, savingsAmount);
 
   return {
     totalIncome: income,

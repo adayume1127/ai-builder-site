@@ -334,6 +334,10 @@ export function recommendationMode(available: number): RecommendationMode {
 
 export type SavingsPlans = { safeSavings: number; standardSavings: number; challengeSavings: number };
 
+// SavingsPlansのうちユーザーが選ぶ1段階。recommendMonthlyBudget()へ渡し、
+// どのプランを今月の予算のベースにするかを決める(Cycle3: 診断結果からのプラン選択)。
+export type SavingsPlanTier = "safe" | "standard" | "challenge";
+
 // 安全/標準/チャレンジの3段階。生活費の確度が低い場合は標準プランを保守化する。
 export function computeSavingsPlans(available: number, livingExpensesConfidence: DataConfidenceState): SavingsPlans {
   const base = Math.max(available, 0);

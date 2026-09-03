@@ -77,6 +77,7 @@ import {
   saveHouseholdProfile,
   saveSpecialExpenses,
   type HouseholdProfile,
+  type SavingsPlanTier,
   type SpecialExpense,
   type SpecialExpenseMode,
 } from "@/lib/householdDiagnosis";
@@ -151,6 +152,11 @@ export default function InvestmentTrackerPage() {
   const [resolvedPromptIds, setResolvedPromptIds] = useState<string[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
   const [showDiagnosisDetail, setShowDiagnosisDetail] = useState(false);
+  // Cycle3: 初めての診断完了後だけ、いきなりBudgetPlanAdoptを見せず「ルナの診断結果」→プラン選択を挟む。
+  // 再診断(edit)・翌月ロールオーバーではこの状態を参照しない(常にBudgetPlanAdoptへ直接進む)。
+  const [selectedPlanTier, setSelectedPlanTier] = useState<SavingsPlanTier>("standard");
+  const [initialAdoptionPhase, setInitialAdoptionPhase] = useState<"result" | "adopt">("result");
+  const [showAdoptionCelebration, setShowAdoptionCelebration] = useState(false);
   const [reDiagnosing, setReDiagnosing] = useState(false);
   const [pendingReDiagnosis, setPendingReDiagnosis] = useState<{
     profile: HouseholdProfile;
@@ -320,6 +326,12 @@ export default function InvestmentTrackerPage() {
     saveHouseholdProfile(profile);
     saveSpecialExpenses(items);
     saveHouseholdDiagnosisSettings({ specialExpenseMode: mode });
+    // 現状の画面遷移では、MonthlyBudget未採用のまま(monthlyBudgets.length===0)このハンドラが
+    // 2回目以降呼ばれる経路は無い(再診断の唯一の入口は採用済みダッシュボード内)。ただし将来の
+    // 導線変更で経路が増えても、選択途中の未保存UI状態(tier・フェーズ)を新しい診断結果に
+    // 持ち越さないための防御的リセット(GPT実装レビューでの指摘)。
+    setInitialAdoptionPhase("result");
+    setSelectedPlanTier("standard");
   }
 
   // 再診断ウィザードが完了した直後。ここではまだ何も保存しない — 今月の予算に反映するかどうかを
@@ -358,6 +370,8 @@ export default function InvestmentTrackerPage() {
     // 以降は今月の予算(MonthlyBudget)と貯金目標を独立して編集できる。
     if (isFirstAdoption) {
       handleSaveSavingsGoal(values.plannedCashSavings);
+      // ダッシュボードに移った直後、「次は今日やることへ」という短い橋渡しを1回だけ見せる(Cycle3)。
+      setShowAdoptionCelebration(true);
     }
   }
 
@@ -524,6 +538,11 @@ export default function InvestmentTrackerPage() {
   const transactionMonthCount = new Set(transactions.map((t) => monthKey(t.date))).size;
   const recommendedMonthlyBudget = householdProfile
     ? recommendMonthlyBudget(householdProfile, specialExpenses, specialExpenseMode)
+    : null;
+  // Cycle3: 「ルナの診断結果」画面でユーザーが選んだプラン(安全/標準/チャレンジ)を反映した推奨額。
+  // 初回採用フロー専用で、goalFundingPlan等の参照は上のrecommendedMonthlyBudget(常にstandard)を使い続ける。
+  const tierAdjustedRecommendation = householdProfile
+    ? recommendMonthlyBudget(householdProfile, specialExpenses, specialExpenseMode, selectedPlanTier)
     : null;
   // 目標達成プラン。DiagnosisResult・HouseholdDashboardの両方でこの1箇所の計算結果を共有する
   // (コンポーネント側で再計算しない。単一の真実源を維持する)。
@@ -723,17 +742,49 @@ export default function InvestmentTrackerPage() {
                 />
               )
             ) : !currentMonthlyBudget || editingBudget ? (
-              <BudgetPlanAdopt
-                variant={editingBudget ? "edit" : monthlyBudgets.length === 0 ? "initial" : "rollover"}
-                diagnosisRecommendation={recommendedMonthlyBudget}
-                previousBudget={editingBudget ? currentMonthlyBudget : previousMonthlyBudget}
-                onAdopt={handleAdoptMonthlyBudget}
-                emergencyFundMonthsCovered={efMonthsCovered}
-                emergencyFundTargetMonths={householdProfile?.emergencyFundMonths ?? 3}
-                goalFundingPlan={goalFundingPlan}
-              />
+              // 真の初回採用(monthlyBudgets.length===0)のときだけ、BudgetPlanAdoptの前に
+              // 「ルナの診断結果」→プラン選択を挟む(Cycle3)。再診断後・翌月ロールオーバー・
+              // 予算編集(editingBudget)ではこれまで通りBudgetPlanAdoptへ直接進む。
+              monthlyBudgets.length === 0 && !editingBudget && initialAdoptionPhase === "result" ? (
+                <DiagnosisResult
+                  profile={householdProfile}
+                  specialExpenses={specialExpenses}
+                  specialExpenseMode={specialExpenseMode}
+                  transactionMonthCount={transactionMonthCount}
+                  goalFundingPlan={goalFundingPlan}
+                  onSaveGoalBonusAllocation={handleSaveGoalBonusAllocation}
+                  selectedTier={selectedPlanTier}
+                  onSelectTier={setSelectedPlanTier}
+                  onProceed={() => setInitialAdoptionPhase("adopt")}
+                  proceedLabel="このプランで今月の予算を確認する"
+                />
+              ) : (
+                <BudgetPlanAdopt
+                  variant={editingBudget ? "edit" : monthlyBudgets.length === 0 ? "initial" : "rollover"}
+                  diagnosisRecommendation={
+                    monthlyBudgets.length === 0 && !editingBudget ? tierAdjustedRecommendation! : recommendedMonthlyBudget
+                  }
+                  previousBudget={editingBudget ? currentMonthlyBudget : previousMonthlyBudget}
+                  onAdopt={handleAdoptMonthlyBudget}
+                  emergencyFundMonthsCovered={efMonthsCovered}
+                  emergencyFundTargetMonths={householdProfile?.emergencyFundMonths ?? 3}
+                  goalFundingPlan={goalFundingPlan}
+                />
+              )
             ) : (
               <div className="space-y-6">
+                {showAdoptionCelebration && (
+                  <div className="flex items-center justify-between gap-2 rounded-xl gold-border bg-white/5 px-4 py-3">
+                    <p className="text-sm">🎉 今月のプランができたよ。次は下の「今日やること」を1つ進めてみよう。</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdoptionCelebration(false)}
+                      className="shrink-0 font-mono text-xs text-muted-foreground underline"
+                    >
+                      とじる
+                    </button>
+                  </div>
+                )}
                 {pendingSpecialExpenseCandidate && (
                   <SpecialExpensePrompt
                     transaction={pendingSpecialExpenseCandidate}

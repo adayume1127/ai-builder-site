@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { LunaCoach } from "../LunaCoach";
 import { formatYen } from "@/lib/portfolio";
 import {
@@ -22,9 +23,16 @@ import {
   variableExpenseRate,
   type GoalFundingPlan,
   type HouseholdProfile,
+  type SavingsPlanTier,
   type SpecialExpense,
   type SpecialExpenseMode,
 } from "@/lib/householdDiagnosis";
+
+const TIER_INFO: { tier: SavingsPlanTier; emoji: string; label: string }[] = [
+  { tier: "safe", emoji: "🌱", label: "ゆとり重視" },
+  { tier: "standard", emoji: "⭐", label: "ルナのおすすめ" },
+  { tier: "challenge", emoji: "🔥", label: "しっかり貯める" },
+];
 
 export function DiagnosisResult({
   profile,
@@ -33,6 +41,10 @@ export function DiagnosisResult({
   transactionMonthCount,
   goalFundingPlan,
   onSaveGoalBonusAllocation,
+  selectedTier,
+  onSelectTier,
+  onProceed,
+  proceedLabel,
 }: {
   profile: HouseholdProfile;
   specialExpenses: SpecialExpense[];
@@ -41,6 +53,13 @@ export function DiagnosisResult({
   // page.tsx側で一度だけ計算した結果を受け取る(このコンポーネント内で再計算しない)。
   goalFundingPlan: GoalFundingPlan | null;
   onSaveGoalBonusAllocation: (amount: number) => void;
+  // 以下4つはCycle3(診断結果からのプラン選択)用のオプトイン機能。指定しなければ従来通り
+  // 「安全/標準/チャレンジ」は静的な比較表示のまま、末尾のCTAボタンも出ない
+  // (「困ったらここ」経由の既存呼び出しはこれらを渡さないため、表示は変わらない)。
+  selectedTier?: SavingsPlanTier;
+  onSelectTier?: (tier: SavingsPlanTier) => void;
+  onProceed?: () => void;
+  proceedLabel?: string;
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -123,20 +142,42 @@ export function DiagnosisResult({
             <h3 className="font-mono text-sm text-muted-foreground">通常月のおすすめ貯金額</h3>
             <p className="text-[10px] text-muted-foreground">家計から見て無理のない月額です(目標から逆算した必要額とは別です)</p>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center font-mono">
-            <div className="rounded-lg border border-white/15 bg-white/5 p-2">
-              <p className="text-[10px] text-muted-foreground">安全</p>
-              <p className="text-sm font-bold">{formatYen(plans.safeSavings)}</p>
+          {onSelectTier ? (
+            <div className="grid grid-cols-3 gap-2 text-center font-mono">
+              {TIER_INFO.map(({ tier, emoji, label }) => {
+                const amount = tier === "safe" ? plans.safeSavings : tier === "standard" ? plans.standardSavings : plans.challengeSavings;
+                const selected = selectedTier === tier;
+                return (
+                  <button
+                    key={tier}
+                    type="button"
+                    onClick={() => onSelectTier(tier)}
+                    className={`rounded-lg p-2 ${selected ? "gold-border bg-white/5" : "border border-white/15 bg-white/5"}`}
+                  >
+                    <p className={`text-[10px] ${selected ? "gold-text" : "text-muted-foreground"}`}>
+                      {emoji} {label}
+                    </p>
+                    <p className={`text-sm font-bold ${selected ? "gold-text" : ""}`}>{formatYen(amount)}</p>
+                  </button>
+                );
+              })}
             </div>
-            <div className="gold-border rounded-lg bg-white/5 p-2">
-              <p className="gold-text text-[10px]">標準・おすすめ</p>
-              <p className="gold-text text-sm font-bold">{formatYen(plans.standardSavings)}</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 text-center font-mono">
+              <div className="rounded-lg border border-white/15 bg-white/5 p-2">
+                <p className="text-[10px] text-muted-foreground">安全</p>
+                <p className="text-sm font-bold">{formatYen(plans.safeSavings)}</p>
+              </div>
+              <div className="gold-border rounded-lg bg-white/5 p-2">
+                <p className="gold-text text-[10px]">標準・おすすめ</p>
+                <p className="gold-text text-sm font-bold">{formatYen(plans.standardSavings)}</p>
+              </div>
+              <div className="rounded-lg border border-white/15 bg-white/5 p-2">
+                <p className="text-[10px] text-muted-foreground">チャレンジ</p>
+                <p className="text-sm font-bold">{formatYen(plans.challengeSavings)}</p>
+              </div>
             </div>
-            <div className="rounded-lg border border-white/15 bg-white/5 p-2">
-              <p className="text-[10px] text-muted-foreground">チャレンジ</p>
-              <p className="text-sm font-bold">{formatYen(plans.challengeSavings)}</p>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -264,6 +305,12 @@ export function DiagnosisResult({
           <DetailRow label="最低自由費" value={formatYen(floor)} />
           <DetailRow label="今月自由に使える金額" value={formatYen(freeToUse)} />
         </div>
+      )}
+
+      {onProceed && (
+        <Button type="button" className="w-full" onClick={onProceed}>
+          {proceedLabel}
+        </Button>
       )}
     </div>
   );
