@@ -99,7 +99,7 @@ export function TodayActionCard({
       {status !== "pending" && plannedCashSavings > 0 && action.reason !== "cash_savings_pending" && (
         <div className="flex items-center justify-between border-t border-white/10 pt-2 font-mono text-[11px] text-muted-foreground">
           <span>
-            先取り貯金: {status === "completed" ? `実行済み ${formatYen(cashSavingsAmountYen)}` : "今月は見送り"}
+            先取り貯金: {status === "completed" ? `確認済み ${formatYen(cashSavingsAmountYen)}` : "今月は見送り"}
           </span>
           <button type="button" onClick={() => onUpdateCashSavings("pending", 0)} className="underline underline-offset-2">
             修正する

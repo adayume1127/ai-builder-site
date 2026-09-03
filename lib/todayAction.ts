@@ -54,7 +54,10 @@ export function buildTodayAction(input: TodayActionInput): TodayAction {
     return {
       reason: "cash_savings_pending",
       headline: `今月の先取り貯金 ${formatYen(input.plannedCashSavings)}を確保しましょう。`,
-      detail: "確保できたら「実行した」を押してください。金額の変更や見送りも選べます。",
+      // 「実行した」は預金残高・収支のいずれも変更しない行動確認であることを明示する(GPTとのPDCA Cycle6)。
+      // 口座間の振替(普通預金→貯金用)をBudgetTransactionの支出として記録すると、単一の預金残高
+      // source of truthが実態より減ってしまう(lib/household.ts参照)ため、家計簿への記録は促さない。
+      detail: "貯金用に取り分けられたら「実行した」を押してください。このボタンは「取り分けたこと」の確認用で、預金残高や収支の金額は変わりません。",
       cashSavingsSuggestedAmount: input.plannedCashSavings,
     };
   }

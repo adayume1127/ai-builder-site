@@ -70,11 +70,10 @@ export function SavingsQuestCard({
           </div>
         </div>
 
-        {earmarked === 0 && (
-          <p className="text-[10px] text-muted-foreground">
-            「確保済み」は、この目標のために取り分けた金額です。預金残高全体とは別に計算しています。
-          </p>
-        )}
+        {/* 入力後にこの説明が消えると、後から「確保済み=預金残高全体」と誤解しうるため常時表示する(GPT Cycle6)。 */}
+        <p className="text-[10px] text-muted-foreground">
+          「確保済み」は、この目標のために取り分けた金額です。預金残高全体とは別に計算しています。
+        </p>
 
         {achieved ? (
           <p className="gold-text border-t border-white/10 pt-3 text-xs font-bold">
