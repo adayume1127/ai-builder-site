@@ -79,8 +79,16 @@ export function GoalStep({
             />
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-xs text-muted-foreground">目標期限(任意)</label>
-            <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className={inputClass} />
+            <label className="font-mono text-xs text-muted-foreground">いつまでに貯めたい？(年月・任意)</label>
+            <input
+              type="month"
+              // <input type="month">はYYYY-MM形式のみ表示できる。旧仕様(<input type="date">)で
+              // 保存されたYYYY-MM-DD値をそのまま渡すと表示が空になってしまう(保存値自体は消えない)ため、
+              // 表示用にYYYY-MM部分だけ切り出す。編集して保存し直すと自然にYYYY-MM形式へ揃う。
+              value={targetDate ? targetDate.slice(0, 7) : ""}
+              onChange={(e) => setTargetDate(e.target.value)}
+              className={inputClass}
+            />
           </div>
           <div className="space-y-1">
             <label className="font-mono text-xs text-muted-foreground">

@@ -378,6 +378,19 @@ export default function InvestmentTrackerPage() {
     saveHouseholdProfile(updated);
   }
 
+  // クエストタブの「確保済み額を更新する」。金融データ(預金残高等)には一切触れず、
+  // HouseholdProfile.goal.alreadyEarmarkedAmount(ユーザー申告値)だけを更新する。
+  function handleUpdateGoalEarmarked(amountYen: number) {
+    if (!householdProfile?.goal) return;
+    const updated: HouseholdProfile = {
+      ...householdProfile,
+      goal: { ...householdProfile.goal, alreadyEarmarkedAmount: amountYen },
+      updatedAt: new Date().toISOString(),
+    };
+    setHouseholdProfile(updated);
+    saveHouseholdProfile(updated);
+  }
+
   function handleAdoptSpecialReserve(newReserve: number) {
     const month = monthKey(todayKey());
     const current = getMonthlyBudget(monthlyBudgets, month);
@@ -669,6 +682,10 @@ export default function InvestmentTrackerPage() {
               totalAssetsYen={totalAssets}
               portfolioAssetsMan={portfolioAssetsMan}
               formMode={formMode}
+              householdGoal={householdProfile?.goal ?? null}
+              goalFundingPlan={goalFundingPlan}
+              onUpdateGoalEarmarked={handleUpdateGoalEarmarked}
+              onGoToBudgetTab={() => setActiveTab("budget")}
               onOpenCreate={() => setFormMode({ type: "create" })}
               onCloseForm={() => setFormMode({ type: "closed" })}
               onCreate={handleCreate}

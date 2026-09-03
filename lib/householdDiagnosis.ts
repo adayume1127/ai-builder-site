@@ -388,6 +388,19 @@ export function bonusAmountWithinDeadline(
 
 export type GoalFeasibility = "on_track_without_bonus" | "achievable_with_bonus" | "insufficient_even_with_bonus";
 
+// BudgetPlanAdopt・SavingsQuestCard等、複数画面で同じ達成可能性の説明文を出すための共有関数。
+// 表示文言を画面ごとに個別定義すると、将来どちらかだけ更新されて表現がズレる恐れがあるため一元化する。
+export function goalFeasibilityMessage(feasibility: GoalFeasibility): string {
+  switch (feasibility) {
+    case "on_track_without_bonus":
+      return "貯金目標: 家計診断のおすすめ額を毎月続ければ、期限までに届く見込みです。";
+    case "achievable_with_bonus":
+      return "貯金目標: 家計診断のおすすめ額に加え、期限内のボーナスも充てれば届く見込みです。";
+    case "insufficient_even_with_bonus":
+      return "貯金目標: 家計診断のおすすめ額を毎月続けても、期限までには届かない見込みです。";
+  }
+}
+
 export type GoalFundingPlan = {
   goalRemaining: number; // max(targetAmount - alreadyEarmarkedAmount, 0)
   remainingMonths: number;

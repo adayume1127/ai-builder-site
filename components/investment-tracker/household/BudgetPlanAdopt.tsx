@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { formatYen } from "@/lib/portfolio";
 import { LunaCoach } from "../LunaCoach";
 import type { MonthlyBudget, RecommendedMonthlyBudget } from "@/lib/monthlyBudget";
-import type { GoalFeasibility, GoalFundingPlan } from "@/lib/householdDiagnosis";
+import { goalFeasibilityMessage, type GoalFundingPlan } from "@/lib/householdDiagnosis";
 
 const inputClass =
   "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]";
@@ -26,20 +26,6 @@ const CTA_LABEL: Record<Variant, string> = {
   rollover: "この内容で今月を始める",
   edit: "この内容で更新する",
 };
-
-// 「困ったらここ」ボタン(lib/householdGuidance.ts)と同じ、事実確認寄りのトーンを踏襲する。
-// 既存ロジックが決めていない資金配分の優先順位(例: 投資より生活防衛資金を優先する)を
-// この画面だけで示唆しない。
-function goalFeasibilityMessage(feasibility: GoalFeasibility): string {
-  switch (feasibility) {
-    case "on_track_without_bonus":
-      return "貯金目標: 家計診断のおすすめ額を毎月続ければ、期限までに届く見込みです。";
-    case "achievable_with_bonus":
-      return "貯金目標: 家計診断のおすすめ額に加え、期限内のボーナスも充てれば届く見込みです。";
-    case "insufficient_even_with_bonus":
-      return "貯金目標: 家計診断のおすすめ額を毎月続けても、期限までには届かない見込みです。";
-  }
-}
 
 function toDraft(source: RecommendedMonthlyBudget): Record<DraftKey, string> {
   return {
