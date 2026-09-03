@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatYen } from "@/lib/portfolio";
-import type { HouseholdProfile } from "@/lib/householdDiagnosis";
+import { FIRE_GOAL_TYPE, type HouseholdProfile } from "@/lib/householdDiagnosis";
 
 const inputClass =
   "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]";
 
-const GOAL_TYPES = ["生活防衛資金", "100万円", "旅行", "車", "住宅", "結婚", "教育", "FIRE / 資産形成", "その他", "特に決まっていない"];
+const GOAL_TYPES = ["生活防衛資金", "100万円", "旅行", "車", "住宅", "結婚", "教育", FIRE_GOAL_TYPE, "その他", "特に決まっていない"];
 
 export function GoalStep({
   value,
@@ -30,6 +30,7 @@ export function GoalStep({
   );
 
   const noGoal = type === "特に決まっていない";
+  const isFireGoal = type === FIRE_GOAL_TYPE;
   const earmarkedExceedsBalance = Number(alreadyEarmarkedAmount) > currentCashSavingsYen;
 
   function handleNext() {
@@ -91,25 +92,31 @@ export function GoalStep({
               className={inputClass}
             />
           </div>
-          <div className="space-y-1">
-            <label className="font-mono text-xs text-muted-foreground">
-              この目標のために、すでに確保しているお金はありますか？(任意)
-            </label>
-            <input
-              type="number"
-              inputMode="decimal"
-              value={alreadyEarmarkedAmount}
-              onChange={(e) => setAlreadyEarmarkedAmount(e.target.value)}
-              placeholder="なければ空欄のままでOK"
-              className={inputClass}
-            />
-            <p className="text-[10px] text-muted-foreground">参考: 現在の現金貯金は{formatYen(currentCashSavingsYen)}です(自動入力はしません)。</p>
-            {earmarkedExceedsBalance && (
-              <p className="text-[10px] text-destructive">
-                現在の現金貯金より多い金額です。目標専用の別口座などであれば問題ありません。
-              </p>
-            )}
-          </div>
+          {isFireGoal ? (
+            <p className="text-[10px] text-muted-foreground">
+              FIRE / 資産形成の進捗は、資産タブに記録した総資産額をそのまま使います。ここで金額を入力する必要はありません。
+            </p>
+          ) : (
+            <div className="space-y-1">
+              <label className="font-mono text-xs text-muted-foreground">
+                この目標のために、すでに確保しているお金はありますか？(任意)
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={alreadyEarmarkedAmount}
+                onChange={(e) => setAlreadyEarmarkedAmount(e.target.value)}
+                placeholder="なければ空欄のままでOK"
+                className={inputClass}
+              />
+              <p className="text-[10px] text-muted-foreground">参考: 現在の現金貯金は{formatYen(currentCashSavingsYen)}です(自動入力はしません)。</p>
+              {earmarkedExceedsBalance && (
+                <p className="text-[10px] text-destructive">
+                  現在の現金貯金より多い金額です。目標専用の別口座などであれば問題ありません。
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

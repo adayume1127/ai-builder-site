@@ -8,6 +8,11 @@ import type { BudgetCategory, BudgetTransaction } from "@/lib/household";
 
 // ===== 定数 =====
 
+// GoalStep.tsxのGOAL_TYPES選択肢のうち、「特定目的のために確保した一部の金額」ではなく
+// 「資産全体」が進捗そのものを表す唯一の型。文字列の重複定義によるズレを防ぐため、
+// GoalStep.tsx側もこの定数を参照する(GPTとのPDCA相談、資産タブ連携の修正)。
+export const FIRE_GOAL_TYPE = "FIRE / 資産形成";
+
 export const PROVISIONAL_BUFFER_RATE = 0.05;
 export const PROVISIONAL_BUFFER_MIN = 5000;
 export const DISCRETIONARY_FLOOR_RATE = 0.08;
@@ -406,7 +411,16 @@ export function goalFeasibilityMessage(feasibility: GoalFeasibility): string {
 }
 
 export type GoalFundingPlan = {
-  goalRemaining: number; // max(targetAmount - alreadyEarmarkedAmount, 0)
+  // 目標に対する現在の進捗額。目的別貯金型(旅行・車・結婚など)はalreadyEarmarkedAmount
+  // (この目標のために確保したと申告した金額)、FIRE/資産形成型は資産タブの実際の総資産額を使う。
+  // goal.type によって意味するもの(source of truth)が異なる点に注意(GPTとのPDCA相談で確定)。
+  progressAmount: number;
+  progressRatio: number; // min(progressAmount / targetAmount, 1)。進捗バー等はここを参照する
+  // FIRE/資産形成型で、資産タブにまだ何も記録がない(currentAssetsYenがnull)場合はfalse。
+  // 「本当に資産0円」と「まだ記録していない」を区別してUI側で表示を分けるために使う。
+  // 目的別貯金型は常にtrue(alreadyEarmarkedAmountは未入力=0円として確定的に扱えるため)。
+  hasAssetData: boolean;
+  goalRemaining: number; // max(targetAmount - progressAmount, 0)
   remainingMonths: number;
   recommendedMonthlyCashSavings: number; // recommendMonthlyBudget().plannedCashSavings(現金分のみ、投資分は含めない)
   // 「このおすすめ現金貯金額を毎月この目標に充てた場合」のシナリオ計算値。目標専用に確保される
@@ -427,6 +441,10 @@ export type GoalFundingPlan = {
 // ユーザーが確定操作をしたときだけ、そのときの値をsaveすること)。
 export function computeGoalFundingPlan(
   goal: NonNullable<HouseholdProfile["goal"]>,
+  // 資産タブの実際の総資産額(円)。FIRE/資産形成型の進捗計算にのみ使う。
+  // null = 資産タブにまだ何も記録がない(page.tsxのhasAssetDataがfalse)。「0円」と「未記録」を
+  // 区別するために、呼び出し元は0ではなくnullを渡すこと。
+  currentAssetsYen: number | null,
   bonusPayments: BonusPayment[],
   recommendedMonthlyCashSavings: number,
   bonusAllocatedOverride: number | undefined,
@@ -436,7 +454,11 @@ export function computeGoalFundingPlan(
   const remainingMonths = remainingMonthsUntil(goal.targetDate, today);
   if (remainingMonths === null) return null;
 
-  const goalRemaining = Math.max(goal.targetAmount - (goal.alreadyEarmarkedAmount ?? 0), 0);
+  const isFireGoal = goal.type === FIRE_GOAL_TYPE;
+  const progressAmount = isFireGoal ? Math.max(currentAssetsYen ?? 0, 0) : Math.max(goal.alreadyEarmarkedAmount ?? 0, 0);
+  const hasAssetData = !isFireGoal || currentAssetsYen !== null;
+  const progressRatio = Math.min(Math.max(progressAmount / goal.targetAmount, 0), 1);
+  const goalRemaining = Math.max(goal.targetAmount - progressAmount, 0);
   const monthlyCash = Math.max(recommendedMonthlyCashSavings, 0);
   const monthlyContributionTotal = monthlyCash * remainingMonths;
   const bonusInWindowTotal = bonusAmountWithinDeadline(bonusPayments, goal.targetDate, today);
@@ -455,6 +477,9 @@ export function computeGoalFundingPlan(
         : "insufficient_even_with_bonus";
 
   return {
+    progressAmount,
+    progressRatio,
+    hasAssetData,
     goalRemaining,
     remainingMonths,
     recommendedMonthlyCashSavings: monthlyCash,

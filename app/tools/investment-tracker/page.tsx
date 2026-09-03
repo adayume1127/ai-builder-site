@@ -535,12 +535,33 @@ export default function InvestmentTrackerPage() {
   const tierAdjustedRecommendation = householdProfile
     ? recommendMonthlyBudget(householdProfile, specialExpenses, specialExpenseMode, selectedPlanTier)
     : null;
+  // 資産タブの実際の資産総額(円)。FIRE/資産形成タイプの目標進捗は「特定目的に確保した額」
+  // ではなく、この総資産額そのものを進捗として扱うため、goalFundingPlanより先に計算する
+  // (以前はこの計算がgoalFundingPlanより後にあり、渡す経路自体が存在しなかった)。
+  const householdNetYen = totalNetYen(transactions, categories);
+  const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
+  const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
+
+  const latestPortfolio = latestSnapshot(snapshots);
+  const liveBreakdown: CategoryBreakdown = {
+    ...(latestPortfolio?.categories ?? emptyBreakdown()),
+    cashSavings: cashCategory,
+  };
+  const manualAssetsTotal = latestPortfolio
+    ? snapshotTotals(latestPortfolio).totalYen - latestPortfolio.categories.cashSavings.currentValueYen
+    : 0;
+  const totalAssets = manualAssetsTotal + cashCategory.currentValueYen;
+  const hasAssetData = latestPortfolio !== null || openingCashBalanceYen !== 0 || transactions.length > 0;
+  const portfolioAssetsMan = hasAssetData ? totalAssets / 10000 : null;
+  const rank = playerRank(goals, portfolioAssetsMan);
+
   // 目標達成プラン。DiagnosisResult・HouseholdDashboardの両方でこの1箇所の計算結果を共有する
   // (コンポーネント側で再計算しない。単一の真実源を維持する)。
   const goalFundingPlan =
     householdProfile?.goal && recommendedMonthlyBudget
       ? computeGoalFundingPlan(
           householdProfile.goal,
+          hasAssetData ? totalAssets : null,
           householdProfile.income.bonusPayments,
           recommendedMonthlyBudget.plannedCashSavings,
           householdProfile.goal.bonusAllocated
@@ -617,23 +638,6 @@ export default function InvestmentTrackerPage() {
         transactionCountThisMonth,
       })
     : null;
-
-  const householdNetYen = totalNetYen(transactions, categories);
-  const thisMonthSummary = monthlySummaries(transactions, categories).find((s) => s.month === nowMonth);
-  const cashCategory = deriveCashCategory(openingCashBalanceYen, householdNetYen, thisMonthSummary?.savingsYen ?? 0);
-
-  const latestPortfolio = latestSnapshot(snapshots);
-  const liveBreakdown: CategoryBreakdown = {
-    ...(latestPortfolio?.categories ?? emptyBreakdown()),
-    cashSavings: cashCategory,
-  };
-  const manualAssetsTotal = latestPortfolio
-    ? snapshotTotals(latestPortfolio).totalYen - latestPortfolio.categories.cashSavings.currentValueYen
-    : 0;
-  const totalAssets = manualAssetsTotal + cashCategory.currentValueYen;
-  const hasAssetData = latestPortfolio !== null || openingCashBalanceYen !== 0 || transactions.length > 0;
-  const portfolioAssetsMan = hasAssetData ? totalAssets / 10000 : null;
-  const rank = playerRank(goals, portfolioAssetsMan);
 
   return (
     <div className="flex h-dvh flex-col">

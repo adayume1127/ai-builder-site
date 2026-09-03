@@ -12,6 +12,7 @@ import {
   emergencyFundMonthsCovered,
   emergencyFundTarget,
   essentialMonthlyExpenses,
+  FIRE_GOAL_TYPE,
   fixedExpenseRate,
   householdScore,
   housingRate,
@@ -210,7 +211,14 @@ export function DiagnosisResult({
 
           <div className="grid grid-cols-2 gap-1.5 text-[11px]">
             <DetailRow label="目標額" value={formatYen(profile.goal.targetAmount ?? 0)} />
-            <DetailRow label="既に確保済み" value={formatYen(profile.goal.alreadyEarmarkedAmount ?? 0)} />
+            <DetailRow
+              label={profile.goal.type === FIRE_GOAL_TYPE ? "現在の資産額" : "既に確保済み"}
+              value={
+                profile.goal.type === FIRE_GOAL_TYPE && !goalFundingPlan.hasAssetData
+                  ? "まだ記録なし"
+                  : formatYen(goalFundingPlan.progressAmount)
+              }
+            />
             <DetailRow label="残り必要額" value={formatYen(goalFundingPlan.goalRemaining)} />
             <DetailRow label="期限まで" value={`${goalFundingPlan.remainingMonths}ヶ月`} />
           </div>

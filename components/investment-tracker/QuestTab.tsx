@@ -56,6 +56,7 @@ export function QuestTab({
           <SavingsQuestCard
             goal={householdGoal}
             goalFundingPlan={goalFundingPlan}
+            totalAssetsYen={totalAssetsYen}
             onUpdateEarmarked={onUpdateGoalEarmarked}
             onGoToBudgetTab={onGoToBudgetTab}
           />

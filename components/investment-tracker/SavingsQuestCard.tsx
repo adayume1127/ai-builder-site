@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "./ProgressBar";
 import { levelForProgress } from "@/lib/investmentTracker";
-import { goalFeasibilityMessage, type GoalFundingPlan, type HouseholdProfile } from "@/lib/householdDiagnosis";
+import { FIRE_GOAL_TYPE, goalFeasibilityMessage, type GoalFundingPlan, type HouseholdProfile } from "@/lib/householdDiagnosis";
 import { formatYen } from "@/lib/portfolio";
 
 const inputClass =
@@ -23,23 +23,34 @@ function questTitle(type: string): string {
 export function SavingsQuestCard({
   goal,
   goalFundingPlan,
+  totalAssetsYen,
   onUpdateEarmarked,
   onGoToBudgetTab,
 }: {
   goal: NonNullable<HouseholdProfile["goal"]>;
   goalFundingPlan: GoalFundingPlan | null;
+  // 資産タブの実際の総資産額(円)。FIRE/資産形成タイプの進捗表示に使う(goalFundingPlanが
+  // 期限未設定でnullのときのフォールバックとしても使う。lib/householdDiagnosis.ts参照)。
+  totalAssetsYen: number;
   onUpdateEarmarked: (amountYen: number) => void;
   onGoToBudgetTab: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [amountInput, setAmountInput] = useState(String(goal.alreadyEarmarkedAmount ?? 0));
 
+  const isFireGoal = goal.type === FIRE_GOAL_TYPE;
   const targetAmount = goal.targetAmount ?? 0;
   const earmarked = goal.alreadyEarmarkedAmount ?? 0;
-  const ratio = targetAmount > 0 ? Math.min(1, Math.max(0, earmarked / targetAmount)) : 0;
+  // goalFundingPlanが計算済みならそこから(単一の真実源)、未計算(期限未設定)なら同じ規則で
+  // ここでも算出する: FIRE型は資産タブの総資産、それ以外は確保済み額。
+  const progressAmount = goalFundingPlan?.progressAmount ?? (isFireGoal ? Math.max(totalAssetsYen, 0) : earmarked);
+  const ratio =
+    goalFundingPlan?.progressRatio ?? (targetAmount > 0 ? Math.min(1, Math.max(0, progressAmount / targetAmount)) : 0);
   const level = levelForProgress(ratio);
-  const remaining = goalFundingPlan?.goalRemaining ?? Math.max(targetAmount - earmarked, 0);
-  const achieved = targetAmount > 0 && earmarked >= targetAmount;
+  const remaining = goalFundingPlan?.goalRemaining ?? Math.max(targetAmount - progressAmount, 0);
+  const achieved = targetAmount > 0 && progressAmount >= targetAmount;
+  // FIREタイプで資産タブにまだ何も記録がない場合、「0円」と断定表示せず「未記録」だと分かるようにする。
+  const noAssetDataYet = isFireGoal && goalFundingPlan !== null && !goalFundingPlan.hasAssetData;
 
   return (
     <Card className="neon-border bg-card/60 backdrop-blur">
@@ -61,8 +72,8 @@ export function SavingsQuestCard({
             <span>{formatYen(targetAmount)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs">確保済み</span>
-            <span>{formatYen(earmarked)}</span>
+            <span className="text-muted-foreground text-xs">{isFireGoal ? "現在の資産額" : "確保済み"}</span>
+            <span>{noAssetDataYet ? "まだ記録なし" : formatYen(progressAmount)}</span>
           </div>
           <div className="col-span-2 flex items-center justify-between">
             <span className="text-muted-foreground text-xs">残り必要額</span>
@@ -70,14 +81,19 @@ export function SavingsQuestCard({
           </div>
         </div>
 
-        {/* 入力後にこの説明が消えると、後から「確保済み=預金残高全体」と誤解しうるため常時表示する(GPT Cycle6)。 */}
+        {/* 入力後にこの説明が消えると、後から「確保済み=預金残高全体」と誤解しうるため常時表示する(GPT Cycle6)。
+            FIREタイプは資産タブの総資産をそのまま使うため、説明の内容自体を分ける(GPTとのPDCA相談)。 */}
         <p className="text-[10px] text-muted-foreground">
-          「確保済み」は、この目標のために取り分けた金額です。預金残高全体とは別に計算しています。
+          {isFireGoal
+            ? noAssetDataYet
+              ? "資産タブでまだ資産が記録されていません。記録すると、この目標の進捗に自動で反映されます。"
+              : "資産タブの現在の総資産額を、そのままこの目標の進捗として自動反映しています。"
+            : "「確保済み」は、この目標のために取り分けた金額です。預金残高全体とは別に計算しています。"}
         </p>
 
         {achieved ? (
           <p className="gold-text border-t border-white/10 pt-3 text-xs font-bold">
-            🎉 目標額を確保できました！
+            {isFireGoal ? "🎉 目標額に到達しました！" : "🎉 目標額を確保できました！"}
           </p>
         ) : goalFundingPlan ? (
           <div className="space-y-1 border-t border-white/10 pt-3 font-mono text-sm">
@@ -98,6 +114,9 @@ export function SavingsQuestCard({
           </div>
         )}
 
+        {/* FIREタイプは資産タブの値を自動で使うため、手動入力の余地(確保済み額の更新)自体を出さない。
+            入力しても計算に使われない操作を見せると、かえって「何を入力すればいいのか」を迷わせるため(GPTとのPDCA相談)。 */}
+        {!isFireGoal && (
         <div className="space-y-2 border-t border-white/10 pt-3">
           {editing ? (
             <div className="flex gap-2">
@@ -141,6 +160,7 @@ export function SavingsQuestCard({
             </Button>
           )}
         </div>
+        )}
       </CardContent>
     </Card>
   );
