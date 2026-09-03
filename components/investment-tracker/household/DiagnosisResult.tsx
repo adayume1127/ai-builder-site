@@ -14,6 +14,7 @@ import {
   essentialMonthlyExpenses,
   FIRE_GOAL_TYPE,
   fixedExpenseRate,
+  goalDeadlineFallback,
   householdScore,
   housingRate,
   monthlySpecialExpenseReserve,
@@ -268,6 +269,16 @@ export function DiagnosisResult({
                 : "期限内に支給予定のボーナスがないため、目標達成プランには反映していません。"}
             </p>
           )}
+        </div>
+      )}
+
+      {/* goalFundingPlanがnull(期限未設定/今月/過去/不正な日付)でも、目標そのものは存在するため
+          セクション自体を消さない。「設定が消えた」ように見せず、状況をそのまま伝える(GPTとの
+          PDCA相談: goalFundingPlan===nullを「未設定」と決め打たない)。 */}
+      {profile.goal && !goalFundingPlan && (
+        <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono text-sm">
+          <p className="text-xs text-muted-foreground">目標達成プラン: {profile.goal.type}</p>
+          <p className="text-xs text-muted-foreground">{goalDeadlineFallback(profile.goal.targetDate).message}</p>
         </div>
       )}
 

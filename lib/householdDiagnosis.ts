@@ -369,6 +369,56 @@ function remainingMonthsUntil(targetDate: string | undefined, today: Date = new 
   return remainingMonths > 0 ? remainingMonths : null;
 }
 
+// computeGoalFundingPlan()がnullを返す条件(targetDate未設定/今月/過去/不正な日付)は、
+// remainingMonthsUntil()内部では区別せずすべてnullにまとめている(計算層はそれで正しい)。
+// しかし呼び出し側のUIがこの1つのnullを「期限を一度も設定していない」と決め打って表示すると、
+// 実際には期限を設定済みで、単に過ぎてしまっただけのユーザーにも「期限を設定すると...」という
+// 事実と異なる文言が出てしまう。この関数はUIの文言出し分け専用に、状態を区別して返す
+// (GPTとのPDCA相談で確定。remainingMonthsUntil()自体の契約は変更しない)。
+export type GoalDeadlineStatus = "no_deadline" | "future" | "this_month" | "past" | "invalid";
+
+export function goalDeadlineStatus(targetDate: string | undefined, today: Date = new Date()): GoalDeadlineStatus {
+  if (!targetDate) return "no_deadline";
+  const target = new Date(targetDate);
+  if (Number.isNaN(target.getTime())) return "invalid";
+  const diff = (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
+  if (diff > 0) return "future";
+  if (diff === 0) return "this_month";
+  return "past";
+}
+
+// targetDate(YYYY-MM または YYYY-MM-DD)を「2026年8月」の形式にする。不正な日付ならnull。
+export function formatTargetDateLabel(targetDate: string): string | null {
+  const target = new Date(targetDate);
+  if (Number.isNaN(target.getTime())) return null;
+  return `${target.getFullYear()}年${target.getMonth() + 1}月`;
+}
+
+// computeGoalFundingPlan()がnull(=期限未設定/今月/過去/不正な日付のいずれか)のときの
+// 案内文・ボタン文言。SavingsQuestCard・DiagnosisResultの両方で同じ文言を使うための
+// 単一の真実源(GPTとのPDCA相談: 「未設定」と「期限切れ」を事実通りに区別する)。
+export function goalDeadlineFallback(targetDate: string | undefined): { message: string; cta: string } {
+  const status = goalDeadlineStatus(targetDate);
+  switch (status) {
+    case "this_month":
+      return { message: "目標期限は今月です。現在の進捗を確認して、必要に応じて期限を見直しましょう。", cta: "期限を見直す" };
+    case "past":
+    case "invalid": {
+      const label = targetDate ? formatTargetDateLabel(targetDate) : null;
+      return {
+        message: label
+          ? `設定した期限(${label})を過ぎています。現在の状況に合わせて期限を見直しましょう。`
+          : "設定した期限を正しく読み取れませんでした。期限を見直しましょう。",
+        cta: "期限を見直す",
+      };
+    }
+    case "no_deadline":
+    case "future":
+    default:
+      return { message: "期限を設定すると、毎月の目安を計算できます。", cta: "家計簿タブで設定する" };
+  }
+}
+
 function monthKeyOf(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }

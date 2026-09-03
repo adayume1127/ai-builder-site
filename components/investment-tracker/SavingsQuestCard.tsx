@@ -6,7 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "./ProgressBar";
 import { levelForProgress } from "@/lib/investmentTracker";
-import { FIRE_GOAL_TYPE, goalFeasibilityMessage, type GoalFundingPlan, type HouseholdProfile } from "@/lib/householdDiagnosis";
+import {
+  FIRE_GOAL_TYPE,
+  goalDeadlineFallback,
+  goalFeasibilityMessage,
+  type GoalFundingPlan,
+  type HouseholdProfile,
+} from "@/lib/householdDiagnosis";
 import { formatYen } from "@/lib/portfolio";
 
 const inputClass =
@@ -51,6 +57,7 @@ export function SavingsQuestCard({
   const achieved = targetAmount > 0 && progressAmount >= targetAmount;
   // FIREタイプで資産タブにまだ何も記録がない場合、「0円」と断定表示せず「未記録」だと分かるようにする。
   const noAssetDataYet = isFireGoal && goalFundingPlan !== null && !goalFundingPlan.hasAssetData;
+  const fallback = goalDeadlineFallback(goal.targetDate);
 
   return (
     <Card className="neon-border bg-card/60 backdrop-blur">
@@ -105,11 +112,9 @@ export function SavingsQuestCard({
           </div>
         ) : (
           <div className="space-y-2 border-t border-white/10 pt-3">
-            <p className="text-xs text-muted-foreground">
-              期限を設定すると、毎月の目安を計算できます。
-            </p>
+            <p className="text-xs text-muted-foreground">{fallback.message}</p>
             <Button type="button" variant="outline" size="sm" className="w-full" onClick={onGoToBudgetTab}>
-              家計簿タブで設定する
+              {fallback.cta}
             </Button>
           </div>
         )}
