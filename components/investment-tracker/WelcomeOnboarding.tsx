@@ -99,6 +99,19 @@ export function WelcomeOnboarding({
         >
           今はスキップ
         </button>
+
+        {/* β公開前チェックリスト対応: データの保存場所・免責事項。「はじめる」の判断を
+            妨げないよう主要導線の下に置くが、常に表示(折りたたまない)。この画面は初回に
+            自動表示されるほか、ヘッダーの「?」ボタンからいつでも再表示できるため、
+            新規ユーザーの初回接触時と、あとから確認したいときの両方をこの1箇所で満たす。 */}
+        <div className="space-y-1.5 rounded-lg border border-white/10 bg-white/[0.02] p-2.5">
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            入力したデータはこの端末のブラウザ内だけに保存されます(運営者のサーバーには送信されません)。ブラウザのデータ削除や機種変更などで消える場合があります。
+          </p>
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            家計管理・資産形成のシミュレーションを目的としたツールで、特定の金融商品の購入・売却を推奨するものではありません。表示される金額や目安は将来の成果を保証するものではないので、投資の最終判断はご自身で行ってください。
+          </p>
+        </div>
       </div>
     </div>
   );

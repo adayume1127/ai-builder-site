@@ -119,7 +119,7 @@ export function GoalForm({
             step="0.1"
             value={assumedRate}
             onChange={(e) => setAssumedRate(e.target.value)}
-            hint="デフォルトは4%。自由に変更できます。"
+            hint="デフォルトは4%。自由に変更できます。将来の運用成績を保証する数値ではありません。"
           />
           <Field
             label="現時点での投資資金(万円)"
