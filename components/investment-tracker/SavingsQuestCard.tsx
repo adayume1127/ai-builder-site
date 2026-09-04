@@ -31,7 +31,7 @@ export function SavingsQuestCard({
   goalFundingPlan,
   totalAssetsYen,
   onUpdateEarmarked,
-  onGoToBudgetTab,
+  onEditGoalDeadline,
 }: {
   goal: NonNullable<HouseholdProfile["goal"]>;
   goalFundingPlan: GoalFundingPlan | null;
@@ -39,7 +39,11 @@ export function SavingsQuestCard({
   // 期限未設定でnullのときのフォールバックとしても使う。lib/householdDiagnosis.ts参照)。
   totalAssetsYen: number;
   onUpdateEarmarked: (amountYen: number) => void;
-  onGoToBudgetTab: () => void;
+  // goalFundingPlanがnull(期限未設定/今月/過去/不正な日付)のときのCTA。単に家計簿タブへ
+  // 切り替えるだけでなく、再診断ウィザードを目標編集ステップ(STEP5)から開始する
+  // (GPTとのPDCA相談: 「期限を見直す」という具体的なCTAである以上、実際に編集箇所まで
+  // 誘導する)。
+  onEditGoalDeadline: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [amountInput, setAmountInput] = useState(String(goal.alreadyEarmarkedAmount ?? 0));
@@ -113,7 +117,7 @@ export function SavingsQuestCard({
         ) : (
           <div className="space-y-2 border-t border-white/10 pt-3">
             <p className="text-xs text-muted-foreground">{fallback.message}</p>
-            <Button type="button" variant="outline" size="sm" className="w-full" onClick={onGoToBudgetTab}>
+            <Button type="button" variant="outline" size="sm" className="w-full" onClick={onEditGoalDeadline}>
               {fallback.cta}
             </Button>
           </div>

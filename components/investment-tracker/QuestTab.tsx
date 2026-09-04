@@ -19,6 +19,7 @@ export function QuestTab({
   goalFundingPlan,
   onUpdateGoalEarmarked,
   onGoToBudgetTab,
+  onEditGoalDeadline,
   onOpenCreate,
   onCloseForm,
   onCreate,
@@ -35,6 +36,9 @@ export function QuestTab({
   goalFundingPlan: GoalFundingPlan | null;
   onUpdateGoalEarmarked: (amountYen: number) => void;
   onGoToBudgetTab: () => void;
+  // 目標(期限)の見直し導線専用。単なるタブ切り替えではなく、再診断ウィザードを
+  // 目標編集ステップから開始する(SavingsQuestCardのgoalFundingPlan===null時のCTA用)。
+  onEditGoalDeadline: () => void;
   onOpenCreate: () => void;
   onCloseForm: () => void;
   onCreate: (input: NewGoalInput) => void;
@@ -58,7 +62,7 @@ export function QuestTab({
             goalFundingPlan={goalFundingPlan}
             totalAssetsYen={totalAssetsYen}
             onUpdateEarmarked={onUpdateGoalEarmarked}
-            onGoToBudgetTab={onGoToBudgetTab}
+            onEditGoalDeadline={onEditGoalDeadline}
           />
         ) : (
           <div className="space-y-2 rounded-xl border border-white/15 bg-white/5 px-4 py-6 text-center">

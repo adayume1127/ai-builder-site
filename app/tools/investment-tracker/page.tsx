@@ -10,7 +10,7 @@ import { BudgetTab } from "@/components/investment-tracker/BudgetTab";
 import { BudgetPlanAdopt } from "@/components/investment-tracker/household/BudgetPlanAdopt";
 import { DiagnosisResult } from "@/components/investment-tracker/household/DiagnosisResult";
 import { HouseholdDashboard } from "@/components/investment-tracker/household/HouseholdDashboard";
-import { HouseholdSetup } from "@/components/investment-tracker/household/HouseholdSetup";
+import { HouseholdSetup, type WizardStep } from "@/components/investment-tracker/household/HouseholdSetup";
 import { MonthlyReviewCard } from "@/components/investment-tracker/household/MonthlyReviewCard";
 import { ReDiagnosisReflectChoice } from "@/components/investment-tracker/household/ReDiagnosisReflectChoice";
 import { SpecialExpensePrompt } from "@/components/investment-tracker/household/SpecialExpensePrompt";
@@ -155,6 +155,9 @@ export default function InvestmentTrackerPage() {
   const [initialAdoptionPhase, setInitialAdoptionPhase] = useState<"result" | "adopt">("result");
   const [showAdoptionCelebration, setShowAdoptionCelebration] = useState(false);
   const [reDiagnosing, setReDiagnosing] = useState(false);
+  // 再診断ウィザードの表示開始ステップ。通常の「診断を見直す」は常に1にリセットしてから開始する
+  // (「期限を見直す」経由の値が次回の通常再診断に残ってしまう回帰を防ぐため)。
+  const [reDiagnosisInitialStep, setReDiagnosisInitialStep] = useState<WizardStep>(1);
   const [pendingReDiagnosis, setPendingReDiagnosis] = useState<{
     profile: HouseholdProfile;
     items: SpecialExpense[];
@@ -347,7 +350,16 @@ export default function InvestmentTrackerPage() {
     }
     setPendingReDiagnosis(null);
     setReDiagnosing(false);
+    setReDiagnosisInitialStep(1);
     setShowDiagnosisDetail(false);
+  }
+
+  // 「期限を見直す」等、目標を直接編集したいときの導線。単に家計簿タブへ切り替えるだけでなく、
+  // 再診断ウィザードを目標編集ステップ(STEP5)から開始する(GPTとのPDCA相談)。
+  function handleEditGoalDeadline() {
+    setReDiagnosisInitialStep(5);
+    setReDiagnosing(true);
+    setActiveTab("budget");
   }
 
   function handleAdoptMonthlyBudget(values: RecommendedMonthlyBudget) {
@@ -696,6 +708,7 @@ export default function InvestmentTrackerPage() {
               goalFundingPlan={goalFundingPlan}
               onUpdateGoalEarmarked={handleUpdateGoalEarmarked}
               onGoToBudgetTab={() => setActiveTab("budget")}
+              onEditGoalDeadline={handleEditGoalDeadline}
               onOpenCreate={() => setFormMode({ type: "create" })}
               onCloseForm={() => setFormMode({ type: "closed" })}
               onCreate={handleCreate}
@@ -728,12 +741,16 @@ export default function InvestmentTrackerPage() {
               ) : (
                 <HouseholdSetup
                   mode="edit"
+                  initialStep={reDiagnosisInitialStep}
                   initialProfile={householdProfile}
                   initialSpecialExpenses={specialExpenses}
                   initialSpecialExpenseMode={specialExpenseMode}
                   currentCashBalanceYen={cashCategory.currentValueYen}
                   onComplete={handleFinishReDiagnosisWizard}
-                  onCancel={() => setReDiagnosing(false)}
+                  onCancel={() => {
+                    setReDiagnosing(false);
+                    setReDiagnosisInitialStep(1);
+                  }}
                 />
               )
             ) : !currentMonthlyBudget || editingBudget ? (
@@ -850,7 +867,10 @@ export default function InvestmentTrackerPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setReDiagnosing(true)}
+                        onClick={() => {
+                          setReDiagnosisInitialStep(1);
+                          setReDiagnosing(true);
+                        }}
                         className="rounded-lg border border-white/15 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:bg-white/5"
                       >
                         診断を見直す

@@ -16,7 +16,7 @@ import {
   type SpecialExpenseMode,
 } from "@/lib/householdDiagnosis";
 
-type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 const STEP_LABELS: Record<WizardStep, string> = {
   1: "収入",
@@ -29,6 +29,7 @@ const STEP_LABELS: Record<WizardStep, string> = {
 
 export function HouseholdSetup({
   mode = "create",
+  initialStep = 1,
   initialProfile,
   initialSpecialExpenses,
   initialSpecialExpenseMode,
@@ -37,6 +38,15 @@ export function HouseholdSetup({
   onCancel,
 }: {
   mode?: "create" | "edit";
+  // ウィザードの表示開始ステップ(既定1)。「診断を見直す」からの通常導線は1のまま、
+  // 「目標だけ編集したい」といった特定ステップへのショートカット導線から使う。
+  // STEP1〜4を無効化するわけではなく、あくまで表示開始位置を変えるだけ(「戻る」で
+  // それ以前のステップにも移動できる)。profile全体は下のuseState初期化時に一括ロード
+  // されるため、未訪問のステップがあってもその項目の値が消えたり空になったりしない。
+  // 想定用途はmode="edit"(再診断)のショートカットのみ。mode="create"(初回診断)は
+  // profileが空のため、途中ステップから始めると前のステップの項目が未入力のまま
+  // 進んでしまう。1以外を渡すのはedit時に限ること。
+  initialStep?: WizardStep;
   initialProfile?: HouseholdProfile;
   initialSpecialExpenses?: SpecialExpense[];
   initialSpecialExpenseMode?: SpecialExpenseMode;
@@ -46,7 +56,7 @@ export function HouseholdSetup({
   onComplete: (profile: HouseholdProfile, specialExpenses: SpecialExpense[], specialExpenseMode: SpecialExpenseMode) => void;
   onCancel?: () => void;
 }) {
-  const [step, setStep] = useState<WizardStep>(1);
+  const [step, setStep] = useState<WizardStep>(initialStep);
   const [profile, setProfile] = useState<HouseholdProfile>(() => {
     if (mode === "edit" && initialProfile) {
       const savings =
