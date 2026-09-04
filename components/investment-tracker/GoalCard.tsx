@@ -49,7 +49,11 @@ export function GoalCard({
   const currentAssets = effectiveCurrentAssetsMan(goal, goalCount, portfolioAssetsMan);
   const ratio = progressRatio(goal, currentAssets);
   const level = levelForProgress(ratio);
-  const required = requiredMonthlyPayment(goal);
+  // ratio(現在の資産ベースの到達度)が既に100%なら、投資元本+貯金だけを見て
+  // 計算するrequiredMonthlyPayment側は古い基準のまま「まだ毎月〇円必要」と出ることがあり、
+  // 上の進捗バー(達成表示)と矛盾して見える。達成済みならこのカード自体を出さない。
+  const achieved = ratio >= 1;
+  const required = achieved ? null : requiredMonthlyPayment(goal);
   const projected = projectedFutureValue(goal);
   const pace = paceStatus(goal);
   const rate = actualAnnualRate(goal.actual);
