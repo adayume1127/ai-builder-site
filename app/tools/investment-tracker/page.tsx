@@ -883,6 +883,7 @@ export default function InvestmentTrackerPage() {
                       transactionMonthCount={transactionMonthCount}
                       goalFundingPlan={goalFundingPlan}
                       onSaveGoalBonusAllocation={handleSaveGoalBonusAllocation}
+                      onEditGoalDeadline={handleEditGoalDeadline}
                     />
                   </div>
                 )}

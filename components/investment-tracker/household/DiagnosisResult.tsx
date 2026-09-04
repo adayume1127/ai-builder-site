@@ -43,6 +43,7 @@ export function DiagnosisResult({
   transactionMonthCount,
   goalFundingPlan,
   onSaveGoalBonusAllocation,
+  onEditGoalDeadline,
   selectedTier,
   onSelectTier,
   onProceed,
@@ -55,6 +56,11 @@ export function DiagnosisResult({
   // page.tsx側で一度だけ計算した結果を受け取る(このコンポーネント内で再計算しない)。
   goalFundingPlan: GoalFundingPlan | null;
   onSaveGoalBonusAllocation: (amount: number) => void;
+  // goalFundingPlanがnull(期限未設定/今月/過去/不正な日付)のときのフォールバックにCTAを
+  // 出す場合だけ指定する(未指定なら従来通りテキストのみ)。再診断ウィザードを目標編集
+  // ステップから開始する想定(page.tsx参照)。初回オンボーディング中の呼び出しでは
+  // まだ再診断の概念がないため渡さない。
+  onEditGoalDeadline?: () => void;
   // 以下4つはCycle3(診断結果からのプラン選択)用のオプトイン機能。指定しなければ従来通り
   // 「安全/標準/チャレンジ」は静的な比較表示のまま、末尾のCTAボタンも出ない
   // (「困ったらここ」経由の既存呼び出しはこれらを渡さないため、表示は変わらない)。
@@ -279,6 +285,11 @@ export function DiagnosisResult({
         <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono text-sm">
           <p className="text-xs text-muted-foreground">目標達成プラン: {profile.goal.type}</p>
           <p className="text-xs text-muted-foreground">{goalDeadlineFallback(profile.goal.targetDate).message}</p>
+          {onEditGoalDeadline && (
+            <Button type="button" variant="outline" size="sm" className="w-full" onClick={onEditGoalDeadline}>
+              {goalDeadlineFallback(profile.goal.targetDate).cta}
+            </Button>
+          )}
         </div>
       )}
 
