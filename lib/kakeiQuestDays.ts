@@ -212,7 +212,7 @@ export const KAKEI_QUEST_DAYS: KakeiQuestDay[] = [
       { speaker: "zundamon", text: "一番大変だったのはどれだったのだ?コメントで教えてほしいのだ!" },
       { speaker: "metan", text: "これ、実は毎月手作業でやるのは正直しんどいのよね。" },
       { speaker: "zundamon", text: "え、そうなのだ?" },
-      { speaker: "metan", text: "だから同じ流れを自動でやってくれる「積立クエスト」ってツールを作ったの。" },
+      { speaker: "metan", text: "だから同じ流れを整理しながら続けられる「積立クエスト」ってツールを作ったの。" },
       { speaker: "zundamon", text: "今日までのミッション、全部このツールでできるのだ?" },
       { speaker: "metan", text: "そう。しかも今なら、一緒にやる仲間を募集してるオープンチャットもあるわ。" },
       { speaker: "zundamon", text: "一人で続かなかった人は、仲間と一緒にやるといいのだ!" },
