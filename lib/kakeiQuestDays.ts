@@ -3,6 +3,18 @@ export type DialogueLine = {
   text: string;
 };
 
+export type ExampleItem = {
+  label: string;
+  amount: number;
+};
+
+export type KakeiQuestExample = {
+  title: string;
+  note: string;
+  items: ExampleItem[];
+  caveat: string;
+};
+
 export type KakeiQuestDay = {
   day: number;
   slug: string;
@@ -11,6 +23,7 @@ export type KakeiQuestDay = {
   summary: string;
   dialogue: DialogueLine[];
   action: string;
+  example?: KakeiQuestExample;
 };
 
 export const KAKEI_QUEST_DAYS: KakeiQuestDay[] = [
@@ -31,15 +44,28 @@ export const KAKEI_QUEST_DAYS: KakeiQuestDay[] = [
       { speaker: "metan", text: "「毎月必ず出ていくお金」が分かると、残りをどう使うか考えやすくなるの。" },
       { speaker: "zundamon", text: "なるほど、家計の土台を知るってことなのだ!" },
       { speaker: "metan", text: "そういうこと。多くても少なくても、まずは数えることが大事よ。" },
-      { speaker: "zundamon", text: "よし、ずんだもんも実際にやってみたのだ!" },
+      { speaker: "zundamon", text: "よし、ずんだもんも実際に自分のカード明細で数えてみたのだ!" },
       { speaker: "metan", text: "どうだった?" },
-      { speaker: "zundamon", text: "数えたら7費目もあったのだ。光熱費が2つと、サブスク系のツール代が4つくらいで、ちょっと驚いたのだ。" },
-      { speaker: "metan", text: "サブスクって、契約したこと自体忘れがちよね。でも金額はここでは言わないでOK。" },
-      { speaker: "zundamon", text: "費目の数だけでも、書き出すと結構スッキリするのだ!" },
+      { speaker: "zundamon", text: "数えたら5費目もあったのだ。光熱費が2つと、仕事で使ってるツール代が3つくらいで、合計21,255円だったのだ。" },
+      { speaker: "metan", text: "今回は特別に、金額込みの実例をこのページの下に見本として載せておくわね。みんなは金額を出さなくて大丈夫よ。" },
+      { speaker: "zundamon", text: "「こんな感じで書けばいいのだ」ってイメージしてもらえたら嬉しいのだ!" },
       { speaker: "metan", text: "みんなも数え終わったら、費目がいくつあったかコメントで教えてね。金額はいらないから。" },
       { speaker: "zundamon", text: "明日はみんなの結果を紹介するのだ!お楽しみに!" },
     ],
     action: "紙かスマホのメモに、毎月絶対に出ていくお金(家賃・光熱費・通信費・保険・サブスクなど)を全部書き出してみよう。",
+    example: {
+      title: "運営者の実例(Day1)",
+      note: "運営者本人が自分のクレジットカード明細から実際に拾い出した固定費です。金額を書くのは必須ではありません、あくまで「こんな感じで書き出せばOK」という見本です。",
+      items: [
+        { label: "ガス代", amount: 2578 },
+        { label: "電気代", amount: 2253 },
+        { label: "仕事のAIツール利用料(サブスク+従量課金)", amount: 11111 },
+        { label: "サーバー・ホスティング費", amount: 3431 },
+        { label: "ドメイン代", amount: 1882 },
+      ],
+      caveat:
+        "このカード明細には家賃・携帯電話代・保険料が載っていませんでした(別払いのため)。人によってカードにまとまる費目は違うので、通帳や他の支払い方法も合わせて確認するのがおすすめです。",
+    },
   },
   {
     day: 2,

@@ -97,6 +97,38 @@ export default async function KakeiQuestDayPage({
         </p>
       </section>
 
+      {content.example && (
+        <section className="max-w-2xl mx-auto px-6 pb-12 w-full">
+          <h2 className="text-sm tracking-[0.3em] gold-text mb-2">— {content.example.title} —</h2>
+          <p className="text-xs text-muted-foreground mb-4">{content.example.note}</p>
+          <div className="rounded-2xl border border-white/10 bg-card/30 p-4">
+            <ul className="space-y-2">
+              {content.example.items.map((item) => (
+                <li
+                  key={item.label}
+                  className="flex justify-between items-baseline text-sm border-b border-white/5 pb-2 last:border-b-0 last:pb-0"
+                >
+                  <span className="text-foreground/90">{item.label}</span>
+                  <span className="neon-text-pink font-mono shrink-0 ml-4">
+                    {item.amount.toLocaleString("ja-JP")}円
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-between items-baseline text-sm mt-4 pt-3 border-t border-white/10 font-semibold">
+              <span>合計</span>
+              <span className="gold-text font-mono">
+                {content.example.items
+                  .reduce((sum, item) => sum + item.amount, 0)
+                  .toLocaleString("ja-JP")}
+                円
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">{content.example.caveat}</p>
+        </section>
+      )}
+
       <div
         className="max-w-xs mx-auto w-full h-px"
         style={{ background: "linear-gradient(to right, transparent, rgba(234,179,8,0.4), transparent)" }}
