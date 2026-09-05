@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { KAKEI_QUEST_DAYS, getKakeiQuestDay } from "@/lib/kakeiQuestDays";
@@ -59,13 +60,17 @@ export default async function KakeiQuestDayPage({
                 className={`flex gap-3 ${isZundamon ? "flex-row" : "flex-row-reverse text-right"}`}
               >
                 <div
-                  className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    isZundamon
-                      ? "neon-border neon-text"
-                      : "neon-border-pink neon-text-pink"
+                  className={`shrink-0 w-9 h-9 rounded-full overflow-hidden ${
+                    isZundamon ? "neon-border" : "neon-border-pink"
                   }`}
                 >
-                  {isZundamon ? "ずん" : "めた"}
+                  <Image
+                    src={isZundamon ? "/characters/zundamon-icon.png" : "/characters/metan-icon.png"}
+                    alt={isZundamon ? "ずんだもん" : "めたん"}
+                    width={36}
+                    height={36}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
