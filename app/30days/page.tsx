@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-// TODO: LINEオープンチャットを作成したら、実際の招待URLに差し替える
-const OPENCHAT_URL = "https://line.me/ti/g2/";
+const OPENCHAT_URL =
+  "https://line.me/ti/g2/9qTQwB1X9phfFgv84RdcvRO_HnffYdHuSHEnsg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
 
 export const metadata: Metadata = {
   title: "30日家計改善クエスト",
