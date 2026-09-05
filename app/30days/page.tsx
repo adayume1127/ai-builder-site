@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { KAKEI_QUEST_DAYS } from "@/lib/kakeiQuestDays";
 
 const OPENCHAT_URL =
   "https://line.me/ti/g2/9qTQwB1X9phfFgv84RdcvRO_HnffYdHuSHEnsg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
@@ -9,26 +10,6 @@ export const metadata: Metadata = {
   description:
     "お金の不安を、30日で少しずつ整理する。YouTube「ずんだもんとめたんの資産形成日記」発、1日1つの小さなミッション企画です。",
 };
-
-const MISSIONS = [
-  { day: 1, label: "毎月絶対に出ていくお金を書き出す" },
-  { day: 2, label: "覚えてない支出を1つ見つける" },
-  { day: 3, label: "生活防衛資金が何ヶ月分あるか計算する" },
-  { day: 4, label: "貯金の目的を1つ決める" },
-  { day: 5, label: "今月自由に使えるお金を計算する" },
-  { day: 6, label: "1週間、支出の記録を始める" },
-  { day: 7, label: "6日間を振り返る" },
-];
-
-const OPERATOR_LOG = [
-  { day: 1, note: "固定費、思ったより費目が多くて驚いた。サブスクだけで5個あった。" },
-  { day: 2, note: "案の定、使った記憶のない支出が1つ見つかった。地味にショック。" },
-  { day: 3, note: "計算したら3ヶ月分もなかった…まずは意識するところから。" },
-  { day: 4, note: "「なんとなく」じゃなく目的を決めたら、貯める理由がはっきりした。" },
-  { day: 5, note: "使えるお金、思ったより少なかった。でも数字で見えると安心感がある。" },
-  { day: 6, note: "レシートを取っておくだけ、を1週間続けてみている。完璧じゃなくていい。" },
-  { day: 7, note: "振り返ってみると、一番大変だったのはDay2(謎支出探し)でした。" },
-];
 
 export default function ThirtyDaysPage() {
   return (
@@ -114,27 +95,27 @@ export default function ThirtyDaysPage() {
         style={{ background: "linear-gradient(to right, transparent, rgba(234,179,8,0.4), transparent)" }}
       />
 
-      {/* 運営者の進捗 */}
+      {/* Dayごとの会話 */}
       <section className="max-w-2xl mx-auto px-6 py-12 w-full">
-        <h2 className="text-sm tracking-[0.3em] gold-text mb-6">— 運営者も30日クエスト挑戦中 —</h2>
+        <h2 className="text-sm tracking-[0.3em] gold-text mb-2">— ずんだもんとめたんと一緒にやろう —</h2>
         <p className="text-xs text-muted-foreground mb-6">
-          動画を作っている本人も、同じミッションを実際にやってみています(金額は非公開です)。
+          運営者本人も実際にやってみた感想込みで、ずんだもんとめたんが1日ずつ会話形式で案内します(金額は非公開です)。
         </p>
         <ul className="space-y-3">
-          {MISSIONS.map((m) => {
-            const log = OPERATOR_LOG.find((l) => l.day === m.day);
-            return (
-              <li key={m.day} className="flex gap-3 rounded-xl border border-white/10 bg-card/30 p-3">
-                <span className="neon-text-pink font-mono text-xs shrink-0 pt-0.5">
-                  Day{m.day} ✓
+          {KAKEI_QUEST_DAYS.map((d) => (
+            <li key={d.day}>
+              <Link
+                href={`/30days/${d.slug}`}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-card/30 p-3 hover:bg-white/5"
+              >
+                <span className="neon-text-pink font-mono text-xs shrink-0">
+                  Day{d.day}
                 </span>
-                <div className="text-xs">
-                  <p className="text-foreground/90">{m.label}</p>
-                  {log && <p className="text-muted-foreground mt-1">{log.note}</p>}
-                </div>
-              </li>
-            );
-          })}
+                <span className="text-xs text-foreground/90 flex-1">{d.title}</span>
+                <span className="text-muted-foreground text-xs shrink-0">会話を読む →</span>
+              </Link>
+            </li>
+          ))}
         </ul>
       </section>
 
