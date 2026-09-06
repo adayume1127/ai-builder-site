@@ -58,6 +58,7 @@ import {
   setCategoryBudget,
   setCategoryNature,
   totalNetYen,
+  updateTransaction,
   updateTransactionCategory,
   type BudgetCategory,
   type BudgetCategoryKind,
@@ -266,6 +267,21 @@ export default function InvestmentTrackerPage() {
     const next = addTransaction(transactions, input);
     setTransactions(next);
     saveTransactions(next);
+  }
+
+  function handleUpdateTransaction(id: string, patch: Partial<Omit<BudgetTransaction, "id">>) {
+    const next = updateTransaction(transactions, id, patch);
+    setTransactions(next);
+    saveTransactions(next);
+
+    // SpecialExpenseCandidateは元取引の金額・カテゴリをスナップショットとして持つ派生データ
+    // (削除時にremoveSpecialExpenseCandidatesForTransactionで一緒に消しているのと同じ理由で、
+    // 編集時も古いスナップショットを残さない。取引が消えたのと同様に扱い、必要なら次回また検知させる)。
+    const nextCandidates = removeSpecialExpenseCandidatesForTransaction(specialExpenseCandidates, id);
+    if (nextCandidates.length !== specialExpenseCandidates.length) {
+      setSpecialExpenseCandidates(nextCandidates);
+      saveSpecialExpenseCandidates(nextCandidates);
+    }
   }
 
   function handleDeleteTransaction(id: string) {
@@ -893,6 +909,7 @@ export default function InvestmentTrackerPage() {
                     transactions={transactions}
                     plannedCashSavingsYen={currentMonthlyBudget?.plannedCashSavings ?? 0}
                     onAddTransaction={handleAddTransaction}
+                    onUpdateTransaction={handleUpdateTransaction}
                     onDeleteTransaction={handleDeleteTransaction}
                     onAddCategory={handleAddCategory}
                     onDeleteCategory={handleDeleteCategory}

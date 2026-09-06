@@ -179,6 +179,18 @@ export function updateTransactionCategory(transactions: BudgetTransaction[], id:
   return transactions.map((t) => (t.id === id ? { ...t, categoryId } : t));
 }
 
+// 記録の履歴からの編集(日付・カテゴリ・金額・メモをまとめて修正)。日付が変わりうるため、
+// 他の一覧表示(常に日付昇順)と順序がずれないよう、変更後に再ソートする。
+export function updateTransaction(
+  transactions: BudgetTransaction[],
+  id: string,
+  patch: Partial<Omit<BudgetTransaction, "id">>
+): BudgetTransaction[] {
+  return transactions
+    .map((t) => (t.id === id ? { ...t, ...patch } : t))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export function monthKey(dateStr: string): string {
   return dateStr.slice(0, 7); // YYYY-MM
 }

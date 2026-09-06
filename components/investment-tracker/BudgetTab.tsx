@@ -41,6 +41,23 @@ const SORT_OPTIONS: { order: SortOrder; label: string }[] = [
   { order: "amount-asc", label: "金額: 低い順" },
 ];
 
+// 「記録の履歴」を月ごとにグループ化する(新しい月が先頭)。グループ内の並び順は
+// sortTransactionsForDisplayに委ねる(月をまたいで並べ替えるわけではない)。
+function groupTransactionsByMonth(
+  transactions: BudgetTransaction[]
+): { month: string; items: BudgetTransaction[] }[] {
+  const byMonth = new Map<string, BudgetTransaction[]>();
+  for (const t of transactions) {
+    const key = monthKey(t.date);
+    const list = byMonth.get(key);
+    if (list) list.push(t);
+    else byMonth.set(key, [t]);
+  }
+  return [...byMonth.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([month, items]) => ({ month, items }));
+}
+
 function sortTransactionsForDisplay(transactions: BudgetTransaction[], order: SortOrder): BudgetTransaction[] {
   const copy = [...transactions];
   switch (order) {
@@ -65,6 +82,7 @@ export function BudgetTab({
   transactions,
   plannedCashSavingsYen,
   onAddTransaction,
+  onUpdateTransaction,
   onDeleteTransaction,
   onAddCategory,
   onDeleteCategory,
@@ -79,6 +97,7 @@ export function BudgetTab({
   // (編集は家計簿タブの「今月の予算」経由。ここは実績との比較だけを行う)。
   plannedCashSavingsYen: number;
   onAddTransaction: (input: Omit<BudgetTransaction, "id">) => void;
+  onUpdateTransaction: (id: string, patch: Partial<Omit<BudgetTransaction, "id">>) => void;
   onDeleteTransaction: (id: string) => void;
   onAddCategory: (label: string, kind: BudgetCategoryKind) => void;
   onDeleteCategory: (id: string) => void;
@@ -108,6 +127,54 @@ export function BudgetTab({
   const [sortOrder, setSortOrder] = useState<SortOrder>("date-desc");
   // 毎日の記録作業とは性質が違う管理操作なので、初期状態では折りたたんでおく(Cycle4)。
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
+
+  // 記録の履歴を月ごとに折りたたんで表示する。件数が増えるほど1画面の縦の長さが
+  // 際限なく伸びていた反省(GPTレビュー後にユーザーから直接指摘)を踏まえ、
+  // 直近の月だけ開いた状態にする。「直近の月」は暦上の今月ではなく、記録が
+  // 存在する最新月(例: 今月まだ何も記録していなければ先月)を指す。
+  const latestMonthWithTransactions =
+    transactions.length > 0
+      ? transactions.reduce((latest, t) => {
+          const m = monthKey(t.date);
+          return m > latest ? m : latest;
+        }, monthKey(transactions[0].date))
+      : monthKey(todayKey());
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(() => new Set([latestMonthWithTransactions]));
+  function toggleMonth(month: string) {
+    setExpandedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(month)) next.delete(month);
+      else next.add(month);
+      return next;
+    });
+  }
+
+  // 記録の履歴からのインライン編集(日付・カテゴリ・金額・メモ)。
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editMemo, setEditMemo] = useState("");
+
+  function startEdit(t: BudgetTransaction) {
+    setEditingId(t.id);
+    setEditDate(t.date);
+    setEditCategoryId(t.categoryId);
+    setEditAmount(String(t.amount));
+    setEditMemo(t.memo ?? "");
+  }
+  function cancelEdit() {
+    setEditingId(null);
+  }
+  function saveEdit(id: string) {
+    const value = Number(editAmount);
+    if (!editCategoryId || !Number.isFinite(value) || value <= 0 || !editDate) return;
+    onUpdateTransaction(id, { date: editDate, categoryId: editCategoryId, amount: value, memo: editMemo });
+    setEditingId(null);
+    // 編集で日付の月が変わった場合、保存直後にその取引が今開いている月から消えて
+    // 見えなくなる(月をまたいで移動した先が閉じたまま)ことを避けるため、移動先の月を開く。
+    setExpandedMonths((prev) => new Set(prev).add(monthKey(editDate)));
+  }
 
   const entryFormRef = useRef<HTMLDivElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
@@ -504,44 +571,160 @@ export function BudgetTab({
               ))}
             </select>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full font-mono text-xs">
-              <thead>
-                <tr className="border-b border-white/10 text-muted-foreground">
-                  <th className="px-3 py-2 text-left font-normal">日付</th>
-                  <th className="px-3 py-2 text-left font-normal">カテゴリ</th>
-                  <th className="px-3 py-2 text-right font-normal">金額</th>
-                  <th className="px-3 py-2 text-left font-normal">メモ</th>
-                  <th className="px-3 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {sortTransactionsForDisplay(transactions, sortOrder).map((t) => {
-                  const isIncome = categories.find((c) => c.id === t.categoryId)?.kind === "income";
-                  return (
-                    <tr key={t.id} className="border-b border-white/5 last:border-0">
-                      <td className="px-3 py-2">{t.date}</td>
-                      <td className="px-3 py-2">{categoryLabelById.get(t.categoryId) ?? "-"}</td>
-                      <td className={`px-3 py-2 text-right ${isIncome ? "neon-text" : "neon-text-pink"}`}>
-                        {isIncome ? "+" : "-"}
-                        {formatYen(t.amount)}
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">{t.memo || "-"}</td>
-                      <td className="px-3 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteWithConfirm(t.id)}
-                          className={deleteButtonClass}
-                          aria-label="削除"
-                        >
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {groupTransactionsByMonth(transactions).map(({ month, items }) => {
+              const isOpen = expandedMonths.has(month);
+              const netYen = items.reduce((sum, t) => {
+                const isIncome = categories.find((c) => c.id === t.categoryId)?.kind === "income";
+                return sum + (isIncome ? t.amount : -t.amount);
+              }, 0);
+              return (
+                <div key={month} className="overflow-hidden rounded-xl border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => toggleMonth(month)}
+                    className="flex w-full items-center justify-between bg-white/[0.03] px-3 py-2 font-mono text-xs"
+                  >
+                    <span className="text-foreground/90">
+                      {month} <span className="text-muted-foreground">({items.length}件)</span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {/* 家計全体の収支ではなく、この月に記録した取引だけの差額であることを明示する
+                          (収入をまだ記録していない月だと大きなマイナスに見え、赤字と誤解されやすいため)。 */}
+                      <span className="text-muted-foreground">記録収支</span>
+                      <span className={netYen >= 0 ? "gold-text" : "text-destructive"}>{formatYen(netYen)}</span>
+                      <span className="text-muted-foreground">{isOpen ? "▲" : "▼"}</span>
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full font-mono text-xs">
+                        <thead>
+                          <tr className="border-b border-t border-white/10 text-muted-foreground">
+                            <th className="px-3 py-2 text-left font-normal">日付</th>
+                            <th className="px-3 py-2 text-left font-normal">カテゴリ</th>
+                            <th className="px-3 py-2 text-right font-normal">金額</th>
+                            <th className="px-3 py-2 text-left font-normal">メモ</th>
+                            <th className="px-3 py-2" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortTransactionsForDisplay(items, sortOrder).map((t) => {
+                            const isIncome = categories.find((c) => c.id === t.categoryId)?.kind === "income";
+                            if (editingId === t.id) {
+                              const editValue = Number(editAmount);
+                              const editInvalid =
+                                !editCategoryId || !Number.isFinite(editValue) || editValue <= 0 || !editDate;
+                              return (
+                                <tr key={t.id} className="border-b border-white/5 bg-white/[0.03] last:border-0">
+                                  <td colSpan={5} className="space-y-2 px-3 py-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <input
+                                        type="date"
+                                        value={editDate}
+                                        onChange={(e) => setEditDate(e.target.value)}
+                                        className={inputClass}
+                                        aria-label="日付を編集"
+                                      />
+                                      <select
+                                        value={editCategoryId}
+                                        onChange={(e) => setEditCategoryId(e.target.value)}
+                                        className={inputClass}
+                                        aria-label="カテゴリを編集"
+                                      >
+                                        {/* 収支の分類を間違えて登録していた場合にも編集画面から直せるよう、
+                                            支出/収入を問わず全カテゴリを選べるようにする(optgroupで分けて表示)。 */}
+                                        <optgroup label="支出">
+                                          {expenseCategories.map((c) => (
+                                            <option key={c.id} value={c.id}>
+                                              {c.label}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                        <optgroup label="収入">
+                                          {incomeCategories.map((c) => (
+                                            <option key={c.id} value={c.id}>
+                                              {c.label}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      </select>
+                                      <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        value={editAmount}
+                                        onChange={(e) => setEditAmount(e.target.value)}
+                                        placeholder="金額(円)"
+                                        className={inputClass}
+                                        aria-label="金額を編集"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={editMemo}
+                                        onChange={(e) => setEditMemo(e.target.value)}
+                                        placeholder="メモ(任意)"
+                                        className={inputClass}
+                                        aria-label="メモを編集"
+                                      />
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        type="button"
+                                        className="flex-1"
+                                        onClick={() => saveEdit(t.id)}
+                                        disabled={editInvalid}
+                                      >
+                                        保存
+                                      </Button>
+                                      <button
+                                        type="button"
+                                        onClick={cancelEdit}
+                                        className="flex-1 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5"
+                                      >
+                                        キャンセル
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            return (
+                              <tr key={t.id} className="border-b border-white/5 last:border-0">
+                                <td className="px-3 py-2">{t.date}</td>
+                                <td className="px-3 py-2">{categoryLabelById.get(t.categoryId) ?? "-"}</td>
+                                <td className={`px-3 py-2 text-right ${isIncome ? "neon-text" : "neon-text-pink"}`}>
+                                  {isIncome ? "+" : "-"}
+                                  {formatYen(t.amount)}
+                                </td>
+                                <td className="px-3 py-2 text-muted-foreground">{t.memo || "-"}</td>
+                                <td className="px-3 py-2 text-right whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => startEdit(t)}
+                                    className="inline-flex min-h-11 min-w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                                    aria-label="編集"
+                                  >
+                                    ✎
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteWithConfirm(t.id)}
+                                    className={deleteButtonClass}
+                                    aria-label="削除"
+                                  >
+                                    ×
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
