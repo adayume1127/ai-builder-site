@@ -6,14 +6,11 @@ import { HelpCircle, RefreshCw } from "lucide-react";
 import { AchievementsTab } from "@/components/investment-tracker/AchievementsTab";
 import { AssetsTab } from "@/components/investment-tracker/AssetsTab";
 import { BottomNav, type TabKey } from "@/components/investment-tracker/BottomNav";
-import { BudgetTab } from "@/components/investment-tracker/BudgetTab";
 import { BudgetPlanAdopt } from "@/components/investment-tracker/household/BudgetPlanAdopt";
 import { DiagnosisResult } from "@/components/investment-tracker/household/DiagnosisResult";
-import { HouseholdDashboard } from "@/components/investment-tracker/household/HouseholdDashboard";
+import { HouseholdBudgetSection, type HouseholdBudgetSubTab } from "@/components/investment-tracker/household/HouseholdBudgetSection";
 import { HouseholdSetup, type WizardStep } from "@/components/investment-tracker/household/HouseholdSetup";
-import { MonthlyReviewCard } from "@/components/investment-tracker/household/MonthlyReviewCard";
 import { ReDiagnosisReflectChoice } from "@/components/investment-tracker/household/ReDiagnosisReflectChoice";
-import { SpecialExpensePrompt } from "@/components/investment-tracker/household/SpecialExpensePrompt";
 import { HomeTab } from "@/components/investment-tracker/HomeTab";
 import { QuestTab, type FormMode } from "@/components/investment-tracker/QuestTab";
 import { WelcomeOnboarding } from "@/components/investment-tracker/WelcomeOnboarding";
@@ -149,7 +146,9 @@ export default function InvestmentTrackerPage() {
   const [specialExpenseCandidates, setSpecialExpenseCandidates] = useState<SpecialExpenseCandidate[]>([]);
   const [resolvedPromptIds, setResolvedPromptIds] = useState<string[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
-  const [showDiagnosisDetail, setShowDiagnosisDetail] = useState(false);
+  // 家計簿タブのサブタブ(今日/予算/履歴/設定)。「困ったらここ」からの誘導など、
+  // ハンドラ側から直接タブを切り替えたい箇所があるためpage.tsx側で保持する。
+  const [budgetSubTab, setBudgetSubTab] = useState<HouseholdBudgetSubTab>("today");
   // Cycle3: 初めての診断完了後だけ、いきなりBudgetPlanAdoptを見せず「ルナの診断結果」→プラン選択を挟む。
   // 再診断(edit)・翌月ロールオーバーではこの状態を参照しない(常にBudgetPlanAdoptへ直接進む)。
   const [selectedPlanTier, setSelectedPlanTier] = useState<SavingsPlanTier>("standard");
@@ -367,7 +366,7 @@ export default function InvestmentTrackerPage() {
     setPendingReDiagnosis(null);
     setReDiagnosing(false);
     setReDiagnosisInitialStep(1);
-    setShowDiagnosisDetail(false);
+    setBudgetSubTab("settings");
   }
 
   // 「期限を見直す」等、目標を直接編集したいときの導線。単に家計簿タブへ切り替えるだけでなく、
@@ -521,7 +520,7 @@ export default function InvestmentTrackerPage() {
       guidance.reason === "goal_insufficient" ||
       guidance.reason === "goal_achievable_with_bonus"
     ) {
-      setShowDiagnosisDetail(true);
+      setBudgetSubTab("settings");
     }
   }
 
@@ -800,126 +799,83 @@ export default function InvestmentTrackerPage() {
                 />
               )
             ) : (
-              <div className="space-y-6">
-                {showAdoptionCelebration && (
-                  <div className="flex items-center justify-between gap-2 rounded-xl gold-border bg-white/5 px-4 py-3">
-                    <p className="text-sm">🎉 今月のプランができたよ。次は下の「今日やること」を1つ進めてみよう。</p>
-                    <button
-                      type="button"
-                      onClick={() => setShowAdoptionCelebration(false)}
-                      className="shrink-0 font-mono text-xs text-muted-foreground underline"
-                    >
-                      とじる
-                    </button>
-                  </div>
-                )}
-                {pendingSpecialExpenseCandidate && (
-                  <SpecialExpensePrompt
-                    transaction={pendingSpecialExpenseCandidate}
-                    categoryLabel={
-                      categories.find((c) => c.id === pendingSpecialExpenseCandidate.categoryId)?.label ?? "支出"
-                    }
-                    onResolve={(decision, recurrence) =>
-                      handleResolveSpecialExpensePrompt(pendingSpecialExpenseCandidate, decision, recurrence)
-                    }
-                  />
-                )}
-                <HouseholdDashboard
-                  summary={dashboardSummary!}
-                  categories={categories}
-                  transactions={transactions}
-                  month={nowMonth}
-                  monthlyHistoryEntries={monthlyHistory(transactions, categories, monthlyReviews).filter((e) => e.month !== nowMonth)}
-                  selectedReviewMonth={reviewTargetMonth}
-                  onSelectReviewMonth={(m) => setSelectedReviewMonth(m)}
-                  budgetSuggestions={budgetSuggestionsForDashboard}
-                  specialReserveSuggestion={
-                    hasAnnualSpecialCandidate ? { estimatedMonthlyReserve: estimatedMonthlySpecial, annualTotal: estimatedAnnualSpecial } : null
-                  }
-                  goalType={householdProfile?.goal?.type ?? null}
-                  goalFundingPlan={goalFundingPlan}
-                  guidance={householdGuidance!}
-                  onGuidanceAction={() => handleGuidanceAction(householdGuidance!, unreviewedPastMonth, monthNeedingReconciliation)}
-                  cashSavingsStatus={getMonthlyActionState(monthlyActionStates, nowMonth)?.cashSavingsStatus ?? null}
-                  cashSavingsAmountYen={getMonthlyActionState(monthlyActionStates, nowMonth)?.cashSavingsAmountYen ?? 0}
-                  onUpdateCashSavingsAction={handleUpdateCashSavingsAction}
-                  onEditBudget={() => setEditingBudget(true)}
-                  onGoToDiagnosis={() => setShowDiagnosisDetail((v) => !v)}
-                  onAdoptBudgetSuggestion={handleSetCategoryBudget}
-                  onAdoptSpecialReserve={handleAdoptSpecialReserve}
-                />
-                {reviewTargetMonth && (
-                  <MonthlyReviewCard
-                    month={reviewTargetMonth}
-                    actualIncome={actualIncome(transactions, categories, reviewTargetMonth)}
-                    actualFixedExpenses={actualFixedExpenses(transactions, categories, reviewTargetMonth)}
-                    actualVariableExpenses={actualVariableExpenses(transactions, categories, reviewTargetMonth)}
-                    actualSpecialExpenses={actualSpecialExpenses(transactions, categories, reviewTargetMonth)}
-                    actualMonthlyInvestment={actualMonthlyInvestment(transactions, categories, reviewTargetMonth)}
-                    monthlySurplus={monthlySurplus(transactions, categories, reviewTargetMonth)}
-                    plannedCashSavings={reviewTargetBudget?.plannedCashSavings ?? 0}
-                    plannedInvestment={reviewTargetBudget?.plannedInvestment ?? 0}
-                    previousMonthSurplus={previousReviewMonth ? monthlySurplus(transactions, categories, previousReviewMonth) : null}
-                    review={getMonthlyReview(monthlyReviews, reviewTargetMonth)}
-                    onSaveAllocation={(cash, special) => handleSaveMonthlyReviewAllocation(reviewTargetMonth, cash, special)}
-                    isLatest={isLatestReviewMonth}
-                    hasOlder={hasOlderReviewMonth}
-                    hasNewer={hasNewerReviewMonth}
-                    onNavigate={handleNavigateReviewMonth}
-                    onJumpToLatest={() => setSelectedReviewMonth(null)}
-                    onRequestInvestmentEntry={handleRequestInvestmentEntry}
-                    hasInvestmentCategory={investmentCategoryId !== null}
-                  />
-                )}
-                {showDiagnosisDetail && (
-                  <div className="space-y-2 border-t border-white/10 pt-6">
-                    <div className="flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setShowDiagnosisDetail(false)}
-                        className="font-mono text-xs text-muted-foreground underline"
-                      >
-                        閉じる ▲
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReDiagnosisInitialStep(1);
-                          setReDiagnosing(true);
-                        }}
-                        className="rounded-lg border border-white/15 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:bg-white/5"
-                      >
-                        診断を見直す
-                      </button>
-                    </div>
-                    <DiagnosisResult
-                      profile={householdProfile}
-                      specialExpenses={specialExpenses}
-                      specialExpenseMode={specialExpenseMode}
-                      transactionMonthCount={transactionMonthCount}
-                      goalFundingPlan={goalFundingPlan}
-                      onSaveGoalBonusAllocation={handleSaveGoalBonusAllocation}
-                      onEditGoalDeadline={handleEditGoalDeadline}
-                    />
-                  </div>
-                )}
-                <div className="border-t border-white/10 pt-6">
-                  <BudgetTab
-                    categories={categories}
-                    transactions={transactions}
-                    plannedCashSavingsYen={currentMonthlyBudget?.plannedCashSavings ?? 0}
-                    onAddTransaction={handleAddTransaction}
-                    onUpdateTransaction={handleUpdateTransaction}
-                    onDeleteTransaction={handleDeleteTransaction}
-                    onAddCategory={handleAddCategory}
-                    onDeleteCategory={handleDeleteCategory}
-                    onSetCategoryBudget={handleSetCategoryBudget}
-                    onSetCategoryNature={handleSetCategoryNature}
-                    investmentEntryRequestId={investmentEntryRequestId}
-                    investmentCategoryId={investmentCategoryId}
-                  />
-                </div>
-              </div>
+              <HouseholdBudgetSection
+                activeSubTab={budgetSubTab}
+                onChangeSubTab={setBudgetSubTab}
+                showAdoptionCelebration={showAdoptionCelebration}
+                onCloseAdoptionCelebration={() => setShowAdoptionCelebration(false)}
+                pendingSpecialExpenseCandidate={pendingSpecialExpenseCandidate}
+                specialExpenseCategoryLabel={
+                  pendingSpecialExpenseCandidate
+                    ? categories.find((c) => c.id === pendingSpecialExpenseCandidate.categoryId)?.label ?? "支出"
+                    : ""
+                }
+                onResolveSpecialExpensePrompt={(decision, recurrence) =>
+                  pendingSpecialExpenseCandidate &&
+                  handleResolveSpecialExpensePrompt(pendingSpecialExpenseCandidate, decision, recurrence)
+                }
+                summary={dashboardSummary!}
+                categories={categories}
+                transactions={transactions}
+                month={nowMonth}
+                onAddTransaction={handleAddTransaction}
+                onUpdateTransaction={handleUpdateTransaction}
+                onDeleteTransaction={handleDeleteTransaction}
+                investmentEntryRequestId={investmentEntryRequestId}
+                investmentCategoryId={investmentCategoryId}
+                guidance={householdGuidance!}
+                onGuidanceAction={() => handleGuidanceAction(householdGuidance!, unreviewedPastMonth, monthNeedingReconciliation)}
+                cashSavingsStatus={getMonthlyActionState(monthlyActionStates, nowMonth)?.cashSavingsStatus ?? null}
+                cashSavingsAmountYen={getMonthlyActionState(monthlyActionStates, nowMonth)?.cashSavingsAmountYen ?? 0}
+                onUpdateCashSavingsAction={handleUpdateCashSavingsAction}
+                budgetSuggestions={budgetSuggestionsForDashboard}
+                specialReserveSuggestion={
+                  hasAnnualSpecialCandidate ? { estimatedMonthlyReserve: estimatedMonthlySpecial, annualTotal: estimatedAnnualSpecial } : null
+                }
+                onEditBudget={() => setEditingBudget(true)}
+                onAdoptBudgetSuggestion={handleSetCategoryBudget}
+                onAdoptSpecialReserve={handleAdoptSpecialReserve}
+                onAddCategory={handleAddCategory}
+                onDeleteCategory={handleDeleteCategory}
+                onSetCategoryBudget={handleSetCategoryBudget}
+                onSetCategoryNature={handleSetCategoryNature}
+                monthlyHistoryEntries={monthlyHistory(transactions, categories, monthlyReviews).filter((e) => e.month !== nowMonth)}
+                selectedReviewMonth={reviewTargetMonth}
+                onSelectReviewMonth={(m) => setSelectedReviewMonth(m)}
+                reviewTargetMonth={reviewTargetMonth}
+                actualIncome={reviewTargetMonth ? actualIncome(transactions, categories, reviewTargetMonth) : 0}
+                actualFixedExpenses={reviewTargetMonth ? actualFixedExpenses(transactions, categories, reviewTargetMonth) : 0}
+                actualVariableExpenses={reviewTargetMonth ? actualVariableExpenses(transactions, categories, reviewTargetMonth) : 0}
+                actualSpecialExpenses={reviewTargetMonth ? actualSpecialExpenses(transactions, categories, reviewTargetMonth) : 0}
+                actualMonthlyInvestment={reviewTargetMonth ? actualMonthlyInvestment(transactions, categories, reviewTargetMonth) : 0}
+                monthlySurplus={reviewTargetMonth ? monthlySurplus(transactions, categories, reviewTargetMonth) : 0}
+                plannedCashSavings={reviewTargetBudget?.plannedCashSavings ?? 0}
+                plannedInvestment={reviewTargetBudget?.plannedInvestment ?? 0}
+                previousMonthSurplus={previousReviewMonth ? monthlySurplus(transactions, categories, previousReviewMonth) : null}
+                review={reviewTargetMonth ? getMonthlyReview(monthlyReviews, reviewTargetMonth) : null}
+                onSaveMonthlyReviewAllocation={(cash, special) =>
+                  reviewTargetMonth && handleSaveMonthlyReviewAllocation(reviewTargetMonth, cash, special)
+                }
+                isLatestReviewMonth={isLatestReviewMonth}
+                hasOlderReviewMonth={hasOlderReviewMonth}
+                hasNewerReviewMonth={hasNewerReviewMonth}
+                onNavigateReviewMonth={handleNavigateReviewMonth}
+                onJumpToLatestReviewMonth={() => setSelectedReviewMonth(null)}
+                onRequestInvestmentEntry={handleRequestInvestmentEntry}
+                hasInvestmentCategory={investmentCategoryId !== null}
+                householdProfile={householdProfile}
+                specialExpenses={specialExpenses}
+                specialExpenseMode={specialExpenseMode}
+                transactionMonthCount={transactionMonthCount}
+                goalType={householdProfile?.goal?.type ?? null}
+                goalFundingPlan={goalFundingPlan}
+                onSaveGoalBonusAllocation={handleSaveGoalBonusAllocation}
+                onEditGoalDeadline={handleEditGoalDeadline}
+                onStartReDiagnosis={() => {
+                  setReDiagnosisInitialStep(1);
+                  setReDiagnosing(true);
+                }}
+              />
             )
           ) : (
             <AchievementsTab
