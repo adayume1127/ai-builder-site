@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { ACHIEVEMENTS, unlockedAchievements, type Goal } from "@/lib/investmentTracker";
 import {
   MONEY_QUEST_STAGE1,
@@ -7,6 +8,7 @@ import {
   type BudgetCategory,
   type BudgetTransaction,
 } from "@/lib/household";
+import { applyImport, downloadExportFile, previewImport } from "@/lib/dataTransfer";
 
 export function AchievementsTab({
   goals,
@@ -39,6 +41,43 @@ export function AchievementsTab({
   const stageCleared = firstIncomplete === -1;
 
   const unlocked = new Set(unlockedAchievements(goals, portfolioAssetsMan).map((a) => a.id));
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importMessage, setImportMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+
+  function handleImportFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // 同じファイルを選び直しても再度onChangeが発火するようにする
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const preview = previewImport(String(reader.result ?? ""), file.size);
+      if (!preview.valid) {
+        setImportMessage({ kind: "error", text: preview.error });
+        return;
+      }
+
+      const exportedAtLabel = new Date(preview.exportedAt).toLocaleString("ja-JP");
+      const confirmed = window.confirm(
+        `このファイルは ${exportedAtLabel} に書き出されたバックアップです(${preview.keyCount}項目)。\n\n` +
+          `読み込むと、今この端末に保存されている積立クエストのデータは、このファイルの状態に置き換わります(バックアップに無い項目は削除されます)。\n\n` +
+          `不安な場合は、先にキャンセルして「データを書き出す」で現在のデータを保存してから読み込み直してください。\n\n` +
+          `このファイルの内容で読み込みますか?`,
+      );
+      if (!confirmed) return;
+
+      const result = applyImport(preview.bundle);
+      if (result.success) {
+        setImportMessage({ kind: "success", text: "データを読み込みました。画面を更新します…" });
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        setImportMessage({ kind: "error", text: result.error });
+      }
+    };
+    reader.onerror = () => setImportMessage({ kind: "error", text: "ファイルの読み込みに失敗しました。" });
+    reader.readAsText(file);
+  }
 
   return (
     <div className="space-y-8">
@@ -148,6 +187,50 @@ export function AchievementsTab({
             );
           })}
         </div>
+      </div>
+
+      <div className="space-y-3 border-t border-white/10 pt-6">
+        <div className="space-y-1 text-center">
+          <h3 className="font-mono text-sm text-muted-foreground">データの引き継ぎ</h3>
+          <p className="text-xs text-muted-foreground">
+            機種変更やブラウザの変更をするときは、書き出したファイルを新しい端末で読み込んでください。
+            これまで通りサーバーには送信されず、ファイルのやり取りだけで完結します。
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <button
+            type="button"
+            onClick={downloadExportFile}
+            className="neon-border rounded-full bg-card/60 px-5 py-2 font-mono text-sm neon-text hover:bg-white/5"
+          >
+            データを書き出す
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="neon-border-pink rounded-full bg-card/60 px-5 py-2 font-mono text-sm neon-text-pink hover:bg-white/5"
+          >
+            データを読み込む
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={handleImportFileSelected}
+          />
+        </div>
+
+        {importMessage && (
+          <p
+            className={`text-center text-xs ${
+              importMessage.kind === "success" ? "gold-text" : "text-red-400"
+            }`}
+          >
+            {importMessage.text}
+          </p>
+        )}
       </div>
     </div>
   );
