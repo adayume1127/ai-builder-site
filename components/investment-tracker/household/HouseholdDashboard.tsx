@@ -124,12 +124,6 @@ export function HouseholdDashboard({
     cashSavingsStatus,
   });
 
-  const categoryLabelById = new Map(categories.map((c) => [c.id, c.label]));
-  const recentTransactions = [...transactions]
-    .filter((t) => t.date.slice(0, 7) === month)
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 5);
-
   return (
     <div className="space-y-4">
       {/* 1. 今日やること(最優先)。「これだけ見れば次に何をすればいいか分かる」が最優先の
@@ -232,28 +226,7 @@ export function HouseholdDashboard({
         </div>
       )}
 
-      {/* 6. 最近の支出 */}
-      {recentTransactions.length > 0 && (
-        <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-          <h3 className="font-mono text-sm text-muted-foreground">最近の支出</h3>
-          {recentTransactions.map((t) => {
-            const isIncome = categories.find((c) => c.id === t.categoryId)?.kind === "income";
-            return (
-              <div key={t.id} className="flex items-center justify-between font-mono text-xs">
-                <span className="text-muted-foreground">
-                  {t.date.slice(5)} {categoryLabelById.get(t.categoryId) ?? "未分類"}
-                </span>
-                <span className={isIncome ? "neon-text" : "neon-text-pink"}>
-                  {isIncome ? "+" : "-"}
-                  {formatYen(t.amount)}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* 6-2. 今月の予算ペース */}
+      {/* 6. 今月の予算ペース */}
       <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 font-mono">
         <div className="flex items-center justify-between text-xs">
           <h3 className="text-muted-foreground">今月の予算ペース</h3>
