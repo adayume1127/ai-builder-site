@@ -11,9 +11,16 @@ import {
   type BudgetTransaction,
 } from "@/lib/household";
 import type { MonthlyHistoryEntry, MonthlyReview } from "@/lib/monthlyReview";
+import { recentMonthsWithTransactions, topExpenseCategorySlots } from "@/lib/categoryBreakdown";
 import { SavingsTrendChart } from "../SavingsTrendChart";
+import { CategoryPieChart } from "./CategoryPieChart";
+import { CategoryTrendChart } from "./CategoryTrendChart";
 import { MonthlyHistoryList } from "./MonthlyHistoryList";
 import { MonthlyReviewCard } from "./MonthlyReviewCard";
+
+// カテゴリ別グラフで遡る月数。長すぎると1本あたりの棒が細くなり判読しづらくなるため、
+// 直近半年分に絞る(円グラフ側は‹/›でこの範囲内を移動する)。
+const CATEGORY_CHART_MONTHS = 6;
 
 const inputClass =
   "w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[oklch(0.85_0.22_195)]";
@@ -169,12 +176,28 @@ export function HouseholdHistoryTab({
   const incomeCategories = categories.filter((c) => c.kind === "income");
   const summaries = monthlySummaries(transactions, categories);
   const trend = cumulativeSavingsTrend(summaries);
+  const categoryChartMonths = recentMonthsWithTransactions(transactions, CATEGORY_CHART_MONTHS);
+  const categoryTopSlots = topExpenseCategorySlots(transactions, categories, categoryChartMonths);
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="font-mono text-sm text-muted-foreground">累計収支の推移</h3>
         <SavingsTrendChart points={trend} />
+      </div>
+
+      <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <div>
+          <h3 className="font-mono text-sm text-muted-foreground">カテゴリ別の支出</h3>
+          <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+            家計簿に記録した支出の内訳です(投資・特別費など、貯金や資産形成に回した分も含みます)
+          </p>
+        </div>
+        <CategoryPieChart transactions={transactions} categories={categories} months={categoryChartMonths} topSlots={categoryTopSlots} />
+        <div className="border-t border-white/10 pt-3">
+          <p className="mb-2 font-mono text-xs text-muted-foreground">直近{CATEGORY_CHART_MONTHS}ヶ月の推移</p>
+          <CategoryTrendChart transactions={transactions} categories={categories} months={categoryChartMonths} topSlots={categoryTopSlots} />
+        </div>
       </div>
 
       <MonthlyHistoryList entries={monthlyHistoryEntries} selectedMonth={selectedReviewMonth} onSelectMonth={onSelectReviewMonth} />
