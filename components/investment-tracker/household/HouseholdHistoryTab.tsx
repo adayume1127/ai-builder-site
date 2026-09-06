@@ -176,8 +176,13 @@ export function HouseholdHistoryTab({
   const incomeCategories = categories.filter((c) => c.kind === "income");
   const summaries = monthlySummaries(transactions, categories);
   const trend = cumulativeSavingsTrend(summaries);
-  const categoryChartMonths = recentMonthsWithTransactions(transactions, CATEGORY_CHART_MONTHS);
-  const categoryTopSlots = topExpenseCategorySlots(transactions, categories, categoryChartMonths);
+  // 円グラフは過去の月もすべて‹/›で遡れるようにする(遡れる上限を設けない)。
+  // 積み上げ棒グラフは1本あたりが細くなりすぎないよう直近半年分に絞る。
+  const categoryChartAllMonths = recentMonthsWithTransactions(transactions);
+  const categoryChartRecentMonths = recentMonthsWithTransactions(transactions, CATEGORY_CHART_MONTHS);
+  // カテゴリの色・ランキングは全期間で1回だけ決め、円グラフ・棒グラフの両方で共有する
+  // (月やグラフによって同じカテゴリの色が変わらないようにするため)。
+  const categoryTopSlots = topExpenseCategorySlots(transactions, categories, categoryChartAllMonths);
 
   return (
     <div className="space-y-6">
@@ -193,10 +198,10 @@ export function HouseholdHistoryTab({
             家計簿に記録した支出の内訳です(投資・特別費など、貯金や資産形成に回した分も含みます)
           </p>
         </div>
-        <CategoryPieChart transactions={transactions} categories={categories} months={categoryChartMonths} topSlots={categoryTopSlots} />
+        <CategoryPieChart transactions={transactions} categories={categories} months={categoryChartAllMonths} topSlots={categoryTopSlots} />
         <div className="border-t border-white/10 pt-3">
           <p className="mb-2 font-mono text-xs text-muted-foreground">直近{CATEGORY_CHART_MONTHS}ヶ月の推移</p>
-          <CategoryTrendChart transactions={transactions} categories={categories} months={categoryChartMonths} topSlots={categoryTopSlots} />
+          <CategoryTrendChart transactions={transactions} categories={categories} months={categoryChartRecentMonths} topSlots={categoryTopSlots} />
         </div>
       </div>
 

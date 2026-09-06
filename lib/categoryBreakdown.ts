@@ -82,11 +82,14 @@ export function monthlyExpenseBreakdown(
   return { month, totalYen, shares };
 }
 
-// 何らかの取引(収入・支出を問わない)が存在する月を古い→新しい順で最大monthsCount件返す
-// (直近N ヶ月)。収入のみで支出が無い月も含まれる(カレンダー上の連続性を保つため、意図的に
-// 支出取引の有無では絞り込まない)。その場合、円グラフ/積み上げ棒には「支出の記録なし」の
-// 月として表示される(monthlyExpenseBreakdown側の責務)。
-export function recentMonthsWithTransactions(transactions: BudgetTransaction[], monthsCount: number): string[] {
+// 何らかの取引(収入・支出を問わない)が存在する月を古い→新しい順で返す。monthsCountを
+// 指定すると直近N ヶ月に絞る(積み上げ棒グラフ用、多すぎると1本あたりが細くなり判読しづらい
+// ため)。省略すると記録が存在する全期間を返す(円グラフの月移動用、過去に遡る上限を設けない)。
+// 収入のみで支出が無い月も含まれる(カレンダー上の連続性を保つため、意図的に支出取引の
+// 有無では絞り込まない)。その場合、円グラフ/積み上げ棒には「支出の記録なし」の月として
+// 表示される(monthlyExpenseBreakdown側の責務)。
+export function recentMonthsWithTransactions(transactions: BudgetTransaction[], monthsCount?: number): string[] {
   const set = new Set(transactions.map((t) => monthKey(t.date)));
-  return [...set].sort().slice(-monthsCount);
+  const sorted = [...set].sort();
+  return monthsCount === undefined ? sorted : sorted.slice(-monthsCount);
 }
