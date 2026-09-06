@@ -1,6 +1,7 @@
 "use client";
 
 import { formatYen } from "@/lib/portfolio";
+import type { BudgetCategory, BudgetTransaction } from "@/lib/household";
 import type { GoalFundingPlan, HouseholdProfile, SpecialExpense, SpecialExpenseMode } from "@/lib/householdDiagnosis";
 import { DiagnosisResult } from "./DiagnosisResult";
 
@@ -8,6 +9,9 @@ import { DiagnosisResult } from "./DiagnosisResult";
 // (以前は「家計診断を見る」ボタン+ページ直下の折りたたみだったものを、常設のタブへ)。
 export function HouseholdSettingsTab({
   profile,
+  transactions,
+  categories,
+  currentMonth,
   specialExpenses,
   specialExpenseMode,
   transactionMonthCount,
@@ -18,6 +22,9 @@ export function HouseholdSettingsTab({
   onStartReDiagnosis,
 }: {
   profile: HouseholdProfile;
+  transactions: BudgetTransaction[];
+  categories: BudgetCategory[];
+  currentMonth: string;
   specialExpenses: SpecialExpense[];
   specialExpenseMode: SpecialExpenseMode;
   transactionMonthCount: number;
@@ -52,6 +59,9 @@ export function HouseholdSettingsTab({
       </div>
       <DiagnosisResult
         profile={profile}
+        transactions={transactions}
+        categories={categories}
+        currentMonth={currentMonth}
         specialExpenses={specialExpenses}
         specialExpenseMode={specialExpenseMode}
         transactionMonthCount={transactionMonthCount}

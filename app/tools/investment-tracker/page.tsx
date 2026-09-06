@@ -65,7 +65,6 @@ import {
 import {
   computeGoalFundingPlan,
   emergencyFundMonthsCovered,
-  essentialMonthlyExpenses,
   loadHouseholdDiagnosisSettings,
   loadHouseholdProfile,
   loadSpecialExpenses,
@@ -100,6 +99,7 @@ import {
   loadMonthlyReviews,
   monthlyHistory,
   monthlySurplus,
+  resolveEssentialMonthlyExpenses,
   reviewNeedsReconciliation,
   saveMonthlyReviews,
   upsertMonthlyReview,
@@ -644,7 +644,12 @@ export default function InvestmentTrackerPage() {
     reviewableMonthsDesc.find((m) =>
       reviewNeedsReconciliation(getMonthlyReview(monthlyReviews, m), monthlySurplus(transactions, categories, m))
     ) ?? null;
-  const essential = householdProfile ? essentialMonthlyExpenses(householdProfile) : 0;
+  // 生活防衛資金の計算に使う「月の生活費」。記録が十分に貯まっていれば実績平均を、
+  // まだなら診断時の申告額を使う(lib/monthlyReview.ts参照)。
+  const essentialBasis = householdProfile
+    ? resolveEssentialMonthlyExpenses(householdProfile, transactions, categories, nowMonth)
+    : null;
+  const essential = essentialBasis?.amountYen ?? 0;
   const efMonthsCovered = householdProfile ? emergencyFundMonthsCovered(householdProfile.savings.cashSavingsBalance, essential) : null;
   const transactionCountThisMonth = transactions.filter((t) => monthKey(t.date) === nowMonth).length;
   const householdGuidance = currentMonthlyBudget
@@ -775,6 +780,9 @@ export default function InvestmentTrackerPage() {
               monthlyBudgets.length === 0 && !editingBudget && initialAdoptionPhase === "result" ? (
                 <DiagnosisResult
                   profile={householdProfile}
+                  transactions={transactions}
+                  categories={categories}
+                  currentMonth={nowMonth}
                   specialExpenses={specialExpenses}
                   specialExpenseMode={specialExpenseMode}
                   transactionMonthCount={transactionMonthCount}

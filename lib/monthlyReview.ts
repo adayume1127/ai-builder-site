@@ -14,6 +14,7 @@ import {
   type BudgetTransaction,
 } from "@/lib/household";
 import { sumExpenseByNature } from "@/lib/monthlyBudget";
+import { essentialMonthlyExpenses, type HouseholdProfile } from "@/lib/householdDiagnosis";
 
 // ===== 実績月の判定 =====
 
@@ -78,6 +79,60 @@ export function monthlySurplus(transactions: BudgetTransaction[], categories: Bu
 // カテゴリごとの当月実績(変動費カテゴリの予算比較・学習に使う)
 export function categoryActualsForMonth(transactions: BudgetTransaction[], categories: BudgetCategory[], month: string) {
   return categoryTotalsForMonth(transactions, categories, month);
+}
+
+// ===== 生活防衛資金向け「月の生活費」の実績ベース算出 =====
+
+// 実績平均を使うために最低限必要な、記録が十分にある過去月の数。
+// suggestBaselineFromTransactions(lib/householdDiagnosis.ts)の「3ヶ月以上のデータ」という
+// 既存の基準に合わせる(このアプリ全体で「実績を信頼し始める」しきい値を統一する)。
+const MIN_MONTHS_FOR_ACTUAL_ESSENTIAL_AVERAGE = 3;
+
+// essentialMonthlyExpenses(profile)は「生活防衛資金 = 収入が止まっても生き延びるための
+// 最低限の生活費」という前提で、変動費のうち食費・交通費だけを含め、外食・娯楽・美容などの
+// 裁量的な支出は含めていない(GPTレビューでの指摘: 実績ベースに切り替える際も、この
+// 「最低限の生活費」という定義そのものは変えず、算出根拠(申告額→実績平均)だけを
+// 高度化する)。実績側で対応するのは標準カテゴリの「食費」「交通費」のみ。
+// insurance/loans/dailyGoods(日用品)に相当する標準カテゴリは存在しないため実績からは
+// 拾えない(申告額側にしかない項目。既知の制約としてコメントに残す)。
+const ESSENTIAL_VARIABLE_CATEGORY_IDS = new Set(["food", "transport"]);
+
+function actualEssentialVariableExpenses(transactions: BudgetTransaction[], categories: BudgetCategory[], month: string): number {
+  return categoryTotalsForMonth(transactions, categories, month)
+    .filter((t) => t.category.kind === "expense" && ESSENTIAL_VARIABLE_CATEGORY_IDS.has(t.category.id))
+    .reduce((sum, t) => sum + t.totalYen, 0);
+}
+
+export type EssentialExpenseBasis = {
+  amountYen: number;
+  source: "actual" | "reported"; // 実績平均から算出したか、診断時の申告額のままか
+  monthsUsed: number; // sourceが"actual"のとき平均に使った月数。"reported"なら0
+};
+
+// 生活防衛資金の計算で使う「月の生活費」を決める。診断時に一度だけ申告した見積もり
+// (lib/householdDiagnosis.tsのessentialMonthlyExpenses)は実態とズレがちなので、
+// 記録が十分に貯まった月(直近の完了済み月、当月は含めない)があれば、そちらの
+// 固定費全体+必須の変動費(食費・交通費)の実績平均を優先する。申告値そのものは
+// 書き換えず、表示のたびにこの関数で再計算するだけ(non-destructive: HouseholdProfileへの
+// 保存は行わない)。
+export function resolveEssentialMonthlyExpenses(
+  profile: HouseholdProfile,
+  transactions: BudgetTransaction[],
+  categories: BudgetCategory[],
+  currentMonth: string,
+  monthsToAverage: number = MIN_MONTHS_FOR_ACTUAL_ESSENTIAL_AVERAGE
+): EssentialExpenseBasis {
+  const pastMonths = completedMonths(transactions, categories)
+    .filter((m) => m !== currentMonth)
+    .slice(0, monthsToAverage);
+  if (pastMonths.length >= MIN_MONTHS_FOR_ACTUAL_ESSENTIAL_AVERAGE) {
+    const total = pastMonths.reduce(
+      (sum, m) => sum + actualFixedExpenses(transactions, categories, m) + actualEssentialVariableExpenses(transactions, categories, m),
+      0
+    );
+    return { amountYen: total / pastMonths.length, source: "actual", monthsUsed: pastMonths.length };
+  }
+  return { amountYen: essentialMonthlyExpenses(profile), source: "reported", monthsUsed: 0 };
 }
 
 // ===== 月末レビュー(ユーザー操作の結果のみを保存する薄いレコード) =====

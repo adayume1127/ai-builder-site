@@ -270,6 +270,9 @@ export function HouseholdBudgetSection({
       ) : (
         <HouseholdSettingsTab
           profile={householdProfile}
+          transactions={transactions}
+          categories={categories}
+          currentMonth={month}
           specialExpenses={specialExpenses}
           specialExpenseMode={specialExpenseMode}
           transactionMonthCount={transactionMonthCount}

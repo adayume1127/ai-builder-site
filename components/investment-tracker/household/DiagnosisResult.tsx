@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LunaCoach } from "../LunaCoach";
 import { formatYen } from "@/lib/portfolio";
+import type { BudgetCategory, BudgetTransaction } from "@/lib/household";
+import { resolveEssentialMonthlyExpenses } from "@/lib/monthlyReview";
 import {
   availableForSavings,
   computeSavingsPlans,
@@ -11,7 +13,6 @@ import {
   discretionaryFloor,
   emergencyFundMonthsCovered,
   emergencyFundTarget,
-  essentialMonthlyExpenses,
   FIRE_GOAL_TYPE,
   fixedExpenseRate,
   goalDeadlineFallback,
@@ -38,6 +39,9 @@ const TIER_INFO: { tier: SavingsPlanTier; emoji: string; label: string }[] = [
 
 export function DiagnosisResult({
   profile,
+  transactions,
+  categories,
+  currentMonth,
   specialExpenses,
   specialExpenseMode,
   transactionMonthCount,
@@ -50,6 +54,10 @@ export function DiagnosisResult({
   proceedLabel,
 }: {
   profile: HouseholdProfile;
+  // 生活防衛資金の「月の生活費」を実績(記録済みの支出)から算出できるかどうかの判定に使う。
+  transactions: BudgetTransaction[];
+  categories: BudgetCategory[];
+  currentMonth: string;
   specialExpenses: SpecialExpense[];
   specialExpenseMode: SpecialExpenseMode;
   transactionMonthCount: number;
@@ -76,7 +84,8 @@ export function DiagnosisResult({
   const available = availableForSavings(profile, specialReserve);
   const mode = recommendationMode(available);
   const plans = computeSavingsPlans(available, profile.confidence.livingExpenses);
-  const essential = essentialMonthlyExpenses(profile);
+  const essentialBasis = resolveEssentialMonthlyExpenses(profile, transactions, categories, currentMonth);
+  const essential = essentialBasis.amountYen;
   const efTarget = emergencyFundTarget(essential, profile.emergencyFundMonths);
   const efCovered = emergencyFundMonthsCovered(profile.savings.cashSavingsBalance, essential);
   const score = householdScore(profile, efCovered, available, plans.standardSavings);
@@ -312,6 +321,11 @@ export function DiagnosisResult({
         </div>
         <p className="text-[10px] text-muted-foreground">
           {efCovered !== null ? `現在 約${efCovered.toFixed(1)}ヶ月分を確保しています` : "生活費を記録すると表示されます"}
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          {essentialBasis.source === "actual"
+            ? `生活防衛資金の計算には、直近${essentialBasis.monthsUsed}ヶ月の生活費の実績平均(${formatYen(essential)}/月)を使っています`
+            : `生活防衛資金の計算には、診断時に入力した生活費(${formatYen(essential)}/月)を使っています。3ヶ月分の記録がたまると、実績平均に切り替わります`}
         </p>
       </div>
 
